@@ -1,0 +1,80 @@
+#!/usr/bin/env dart
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:unscripted/unscripted.dart';
+import 'package:den/den.dart';
+import 'package:den/src/pub_api.dart';
+import 'package:path/path.dart' as p;
+import 'package:pub_semver/pub_semver.dart';
+
+main(arguments) => declare(Den).execute(arguments);
+    
+class Den {
+  
+  @Command(help: 'Interact with pubspecs', plugins: const [const Completion()])
+  Den();
+  
+  @SubCommand(help: 'Add or modify pubspec dependencies')
+  depend(
+      @Rest(
+          required: true, 
+          valueHelp: 'package ids', 
+          // allowed: _fetchAllPackageNames, 
+          help: '''
+For --source=hosted the name(s) e.g. "foo", for --source=git the url(s) e.g. "git:...", for --source=path the path(s) e.g. "foo/bar/baz".''')
+      List<String> packages,
+      {
+      @Option(abbr: 's', allowed: const ['hosted', 'git', 'path'], help: 'The source of the package(s).')
+      String source: 'hosted',
+      @Option(parser: _parseVersionConstraint, help: 'The version constraint of the package(s), only applicable when --source=hosted.')
+      VersionConstraint constraint,
+      @Flag(help: 'Whether this is a dev dependency.')
+      bool dev: false
+  }) {
+    
+    print('source: $source');
+    print('dev: $dev');
+    print('constraint: $constraint');
+    
+    new Future(() {
+      if(source == 'hosted' && constraint == null) {
+
+        VersionRange getCompatibleVersionRange(Version version) {
+          var nextBreaking = version.major >= 1 ? version.nextMajor : version.nextMinor;
+          return new VersionRange(min: version, max: nextBreaking, includeMin: true);
+        }
+        
+        return Future.wait(packages.map((package) => fetchPackage('http://pub.dartlang.org/packages/$package.json'))).then((packages) {
+          print('packages: $packages');
+          return packages.map((package) => new PackageDep(package.name, source, getCompatibleVersionRange(package.latest), null));
+        });
+      }
+      return packages
+          .map((package) => new PackageDep(package, source, constraint, null));
+    }).then((deps) {
+      var pubspec = Pubspec.load();
+      deps.forEach(dev ? pubspec.addDevDependency : pubspec.addDependency);
+      new File(pubspec.path).writeAsStringSync(pubspec.contents);
+    });
+  }
+}
+
+VersionConstraint _parseVersionConstraint(String constraint) {
+  if(constraint == null) return null;
+  return new VersionConstraint.parse(constraint);
+}
+
+Future<Iterable<String>> _fetchAllPackageNames() => new Future(() {
+  var packageListPath = p.join(Platform.environment['PUB_CACHE'], 'den', 'lib', 'pub_data', 'packages_list.json');
+  var packageListFile = new File(packageListPath);
+  if(packageListFile.existsSync()) return JSON.decode(packageListFile.readAsStringSync());
+  return fetchAllPackages().then((packages) {
+    var packageList = packages.map((package) => package.name).toList();
+    var packageListJson = JSON.encode(packageList);
+    packageListFile.writeAsStringSync(packageListJson);
+    return packageList;
+  });
+});

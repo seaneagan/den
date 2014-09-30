@@ -1,4 +1,4 @@
-pubspec
-=======
+den
+===
 
-Interact with dart pubspec.yaml files
+Interact with pubspecs.
