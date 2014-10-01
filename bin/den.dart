@@ -25,8 +25,6 @@ class Den {
 For --source=hosted the name(s) e.g. "foo", for --source=git the url(s) e.g. "git:...", for --source=path the path(s) e.g. "foo/bar/baz".''')
       List<String> packages,
       {
-      @Option(allowMultiple: true, allowed: packageList)
-      List<String> on,
       @Option(abbr: 's', allowed: const ['hosted', 'git', 'path'], help: 'The source of the package(s).')
       String source: 'hosted',
       @Option(parser: _parseVersionConstraint, help: 'The version constraint of the package(s), only applicable when --source=hosted.')
