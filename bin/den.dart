@@ -1,13 +1,11 @@
 #!/usr/bin/env dart
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:unscripted/unscripted.dart';
 import 'package:den/den.dart';
-import 'package:den/src/pub_api.dart';
-import 'package:path/path.dart' as p;
+import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 main(arguments) => declare(Den).execute(arguments);
@@ -22,11 +20,13 @@ class Den {
       @Rest(
           required: true, 
           valueHelp: 'package ids', 
-          // allowed: _fetchAllPackageNames, 
+          allowed: packageList, 
           help: '''
 For --source=hosted the name(s) e.g. "foo", for --source=git the url(s) e.g. "git:...", for --source=path the path(s) e.g. "foo/bar/baz".''')
       List<String> packages,
       {
+      @Option(allowMultiple: true, allowed: packageList)
+      List<String> on,
       @Option(abbr: 's', allowed: const ['hosted', 'git', 'path'], help: 'The source of the package(s).')
       String source: 'hosted',
       @Option(parser: _parseVersionConstraint, help: 'The version constraint of the package(s), only applicable when --source=hosted.')
@@ -34,11 +34,7 @@ For --source=hosted the name(s) e.g. "foo", for --source=git the url(s) e.g. "gi
       @Flag(help: 'Whether this is a dev dependency.')
       bool dev: false
   }) {
-    
-    print('source: $source');
-    print('dev: $dev');
-    print('constraint: $constraint');
-    
+
     new Future(() {
       if(source == 'hosted' && constraint == null) {
 
@@ -48,10 +44,10 @@ For --source=hosted the name(s) e.g. "foo", for --source=git the url(s) e.g. "gi
         }
         
         return Future.wait(packages.map((package) => fetchPackage('http://pub.dartlang.org/packages/$package.json'))).then((packages) {
-          print('packages: $packages');
           return packages.map((package) => new PackageDep(package.name, source, getCompatibleVersionRange(package.latest), null));
         });
       }
+      
       return packages
           .map((package) => new PackageDep(package, source, constraint, null));
     }).then((deps) {
@@ -66,15 +62,3 @@ VersionConstraint _parseVersionConstraint(String constraint) {
   if(constraint == null) return null;
   return new VersionConstraint.parse(constraint);
 }
-
-Future<Iterable<String>> _fetchAllPackageNames() => new Future(() {
-  var packageListPath = p.join(Platform.environment['PUB_CACHE'], 'den', 'lib', 'pub_data', 'packages_list.json');
-  var packageListFile = new File(packageListPath);
-  if(packageListFile.existsSync()) return JSON.decode(packageListFile.readAsStringSync());
-  return fetchAllPackages().then((packages) {
-    var packageList = packages.map((package) => package.name).toList();
-    var packageListJson = JSON.encode(packageList);
-    packageListFile.writeAsStringSync(packageListJson);
-    return packageList;
-  });
-});
