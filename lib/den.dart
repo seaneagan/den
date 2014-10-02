@@ -54,16 +54,39 @@ class Pubspec {
   void _addDependency(PackageDep dep, String location) {
     // TODO: Ensure dependency won't exist in both dependencies and dev_dependencies.
     // TODO: Log whether we're replacing an existing dependency or adding a new one, and all dependency metadata.
+    
+    
+    String depSourceDescription;
+    if(dep.source == 'hosted') {
+      depSourceDescription = "'${dep.constraint}'";
+      if(dep.description is Map) {
+        // TODO: Implement for hosted dep map descriptions as well.
+        throw new UnimplementedError('Description maps are not yet implemented for adding deps from source "${dep.source}".');
+      }
+    } else {
+      String description;
+      if(dep.description is Map) {
+        var descMap = dep.description;
+        if(dep.source == 'git') {
+          description = ['url', 'ref'].where(descMap.containsKey).map((descKey) => '\n  $descKey: ${descMap[descKey]}').join();
+        } else {
+          throw new ArgumentError('Description maps are not valid for deps with source "${dep.source}".');
+        }
+      } else {
+        description = ' ${dep.description}';
+      }
+      depSourceDescription = "${dep.source}:$description";
+    }
+    
     var containerValue = _yamlMap[location];
     if(containerValue == null) {
-      _contents = setMapKey(_contents, _yamlMap, location, """
-
-  ${dep.name}: '${dep.constraint}'""");
-      _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
+      _contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
     } else {
-      _contents = setMapKey(_contents, _yamlMap[location], dep.name, "'${dep.constraint}'");
-      _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
+      var ownLine = dep.description != null;
+      _contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
     }
+    print('new contents:\n$_contents');
+    _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
   }
   
   /// The [basename] of a pubpsec file.

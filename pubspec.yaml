@@ -7,9 +7,10 @@ dependencies:
   path: any
   pub_package_data: any
   pub_semver: '>=1.0.0 <2.0.0'
+  source_span: any
   unscripted: '>=0.4.3 <0.5.0'
   yaml: '>=2.0.1+1 <3.0.0'
 dev_dependencies:
   unittest: '>=0.11.0 <12.0.0'
 executables:
-  den: null
+  den:

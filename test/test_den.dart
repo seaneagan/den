@@ -1,5 +1,6 @@
 
 import 'package:den/den.dart';
+import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:unittest/unittest.dart';
 import 'package:yaml/yaml.dart';
@@ -19,13 +20,12 @@ main() {
     
     group('addDependency', () {
 
-      test('should add a dependency', () {
-        var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
-        pubspec.addDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null));
-        expect(pubspec.contents, '''
-name: foo
-author: Jane Doe
-version: 1.2.3
+      test('should add a hosted dependency', () {
+        testAddDependency(
+            new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null),
+            pubspecContents,
+            '''
+$preamble
 dependencies:
   bar: any
   baz: '>=1.0.0 <2.0.0' # Comment
@@ -35,29 +35,12 @@ dev_dependencies:
 ''');
       });
 
-      test('addDevDependency should add a dev dependency', () {
-        var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
-        pubspec.addDevDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null));
-        expect(pubspec.contents, '''
-name: foo
-author: Jane Doe
-version: 1.2.3
-dependencies:
-  bar: any
-  baz: '>=1.0.0 <2.0.0' # Comment
-dev_dependencies:
-  unittest: any
-  abc: '1.0.0'
-''');
-      });
-      
       test('should replace an existing dependency', () {
-        var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
-        pubspec.addDependency(new PackageDep('baz', 'hosted', new VersionConstraint.parse('2.0.0'), null));
-        expect(pubspec.contents, '''
-name: foo
-author: Jane Doe
-version: 1.2.3
+        testAddDependency(
+            new PackageDep('baz', 'hosted', new VersionConstraint.parse('2.0.0'), null),
+            pubspecContents,
+            '''
+$preamble
 dependencies:
   bar: any
   baz: '2.0.0' # Comment
@@ -68,23 +51,98 @@ dev_dependencies:
     });
 
     test('should add dependencies key if missing', () {
-      var pubspec = new Pubspec(null, missingDependencies, loadYamlNode(missingDependencies));
-      pubspec.addDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null));
-      expect(pubspec.contents, '''
-name: foo
-author: Jane Doe
-version: 1.2.3
+      testAddDependency(
+          new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null),
+          preamble,
+          '''
+$preamble
 dependencies:
   abc: '1.0.0'
 ''');
     });
   });
+  
+  test('should add a path dependency', () {
+    var path = p.join('foo', 'bar', 'baz');
+    testAddDependency(
+        new PackageDep('abc', 'path', null, path),
+        pubspecContents,
+        '''
+$preamble
+dependencies:
+  bar: any
+  baz: '>=1.0.0 <2.0.0' # Comment
+  abc:
+    path: $path
+dev_dependencies:
+  unittest: any
+''');
+  });
+
+  test('should add a git dependency', () {
+    testAddDependency(
+        new PackageDep('abc', 'git', null, 'git://github.com/foo/bar.git'),
+        pubspecContents,
+        '''
+$preamble
+dependencies:
+  bar: any
+  baz: '>=1.0.0 <2.0.0' # Comment
+  abc:
+    git: git://github.com/foo/bar.git
+dev_dependencies:
+  unittest: any
+''');
+  });
+
+  test('should add a git dependency with ref', () {
+    testAddDependency(
+        new PackageDep('abc', 'git', null, {
+          'url': 'git://github.com/foo/bar.git',
+          'ref': 'foo-branch',
+        }),
+        pubspecContents,
+        '''
+$preamble
+dependencies:
+  bar: any
+  baz: '>=1.0.0 <2.0.0' # Comment
+  abc:
+    git:
+      url: git://github.com/foo/bar.git
+      ref: foo-branch
+dev_dependencies:
+  unittest: any
+''');
+  });
+
+  group('addDevDependency', () {
+    
+    test('should add a dev dependency', () {
+      var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
+      pubspec.addDevDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null));
+      expect(pubspec.contents, '''
+$preamble
+dependencies:
+  bar: any
+  baz: '>=1.0.0 <2.0.0' # Comment
+dev_dependencies:
+  unittest: any
+  abc: '1.0.0'
+''');
+    });
+  });
+  
+}
+
+testAddDependency(PackageDep dependency, String originalContents, String expectedNewContents) {
+  var pubspec = new Pubspec(null, originalContents, loadYamlNode(originalContents));
+  pubspec.addDependency(dependency);
+  expect(pubspec.contents, expectedNewContents);
 }
 
 var pubspecContents = '''
-name: foo
-author: Jane Doe
-version: 1.2.3
+$preamble
 dependencies:
   bar: any
   baz: '>=1.0.0 <2.0.0' # Comment
@@ -92,8 +150,7 @@ dev_dependencies:
   unittest: any
 ''';
 
-var missingDependencies = '''
+var preamble = '''
 name: foo
 author: Jane Doe
-version: 1.2.3
-''';
+version: 1.2.3''';
