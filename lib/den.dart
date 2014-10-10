@@ -12,6 +12,10 @@ import 'src/yaml_edit.dart';
 class Pubspec {
   
   String get contents => _contents;
+  set contents(String contents) {
+    _contents = contents;
+    _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
+  }
   String _contents;
   YamlMap get yamlMap => _yamlMap;
   YamlMap _yamlMap;
@@ -49,13 +53,21 @@ class Pubspec {
         yaml);
   }
   
+  void undepend(String packageName, {bool dev: false}) {
+    var depGroup = dev ? devDependencies : dependencies;
+    // Remove parent node if it will be empty after this operation.
+    if(depGroup is Map) {
+      var isLast = depGroup.length == 1 && depGroup.containsKey(packageName);
+      var deleteFrom = isLast ? yamlMap : depGroup;
+      var deleteKey = isLast ? (dev ? 'dev_dependencies' : 'dependencies') : packageName;
+      contents = deleteMapKey(_contents, deleteFrom, deleteKey);
+    }
+  }
+  
   void addDependency(PackageDep dep) => _addDependency(dep, 'dependencies');
   void addDevDependency(PackageDep dep) => _addDependency(dep, 'dev_dependencies');
   void _addDependency(PackageDep dep, String location) {
-    // TODO: Ensure dependency won't exist in both dependencies and dev_dependencies.
     // TODO: Log whether we're replacing an existing dependency or adding a new one, and all dependency metadata.
-    
-    
     String depSourceDescription;
     if(dep.source == 'hosted') {
       depSourceDescription = "'${dep.constraint}'";
@@ -80,13 +92,11 @@ class Pubspec {
     
     var containerValue = _yamlMap[location];
     if(containerValue == null) {
-      _contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
+      contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
     } else {
       var ownLine = dep.description != null;
-      _contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
+      contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
     }
-    print('new contents:\n$_contents');
-    _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
   }
   
   /// The [basename] of a pubpsec file.

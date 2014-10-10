@@ -4,6 +4,22 @@ library yaml_edit;
 import 'package:yaml/yaml.dart';
 import 'package:source_span/source_span.dart';
 
+import 'util.dart';
+
+String deleteMapKey(String yaml, YamlMap mapNode, String key) {
+
+  if(!mapNode.containsKey(key)) return yaml;
+  var keyNode = mapNode.nodes.keys.firstWhere((keyNode) => keyNode.value == key);
+  var valueNode = mapNode.nodes[key];
+  // - 1 to remove preceding newline as well.
+  // TODO: Is there ever a case where there is no newline?
+  var startIndex = (keyNode.span.start.offset - keyNode.span.start.column) - 1;
+  var endIndex = valueNode.span.end.offset;
+    
+  return yaml.substring(0, startIndex) + yaml.substring(endIndex);
+}
+
+
 String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) {
   var startLocation, endLocation, insertion;
   if(mapNode.isEmpty) throw new UnimplementedError("Editing empty flow mappings e.g. {} is not yet implemented.");
@@ -43,14 +59,11 @@ String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) 
 
 String replaceSpan(String wholeText, String newText, SourceLocation start, SourceLocation end) {
   var toReplace = new SourceSpan(start, end, wholeText.substring(start.offset, end.offset));
+  // TODO: Show a diff (with red/green ansicolor), and add an interactive mode which will prompt "Is this OK? (y/n): "
   // print('Replacing $toReplace with $newText');
   return (new StringBuffer()
       ..write(wholeText.substring(0, start.offset))
       ..write(newText)
       ..write(wholeText.substring(end.offset)))
       .toString();
-}
-
-String indent(String str, int indent) {
-  return str.splitMapJoin('\n', onNonMatch: (String line) => ' ' * indent + line);
 }
