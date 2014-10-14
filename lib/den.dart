@@ -1,208 +1,224 @@
 
 library den;
 
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:den/src/pub.dart';
+import 'package:den/src/util.dart';
 import 'package:path/path.dart' as p;
-import 'package:yaml/yaml.dart';
+import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
-
-import 'src/yaml_edit.dart';
-
-class Pubspec {
-  
-  String get contents => _contents;
-  set contents(String contents) {
-    _contents = contents;
-    _yamlMap = loadYamlNode(_contents, sourceUrl: _yamlMap.span.sourceUrl);
-  }
-  String _contents;
-  YamlMap get yamlMap => _yamlMap;
-  YamlMap _yamlMap;
-  String get path => _path;
-  final String _path;
-  String get name => _yamlMap['name'];
-  String get author => _yamlMap['author'];
-  String get version => _yamlMap['version'];
-  String get homepage => _yamlMap['homepage'];
-  String get documentation => _yamlMap['documentation'];
-  String get description => _yamlMap['description'];
-  Map<String, dynamic> get dependencies => 
-      _yamlMap.containsKey('dependencies') ? 
-          _yamlMap['dependencies'] : const {};
-  Map<String, dynamic> get devDependencies => 
-      _yamlMap.containsKey('dev_dependencies') ? 
-          _yamlMap['dev_dependencies'] : const {};
-  Map<String, dynamic> get dependencyOverrides => 
-      _yamlMap.containsKey('dependency_overrides') ? 
-          _yamlMap['dependency_overrides'] : const {};
-  
-  Pubspec(
-      this._path,
-      this._contents, 
-      this._yamlMap);
-  
-  static Pubspec load([String path]) {
-    var packageRoot = _getPackageRoot(path == null ? p.current : path);
-    var pubspecPath = p.join(packageRoot, _PUBSPEC);
-    var contents = new File(pubspecPath).readAsStringSync();
-    var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
-    return new Pubspec(
-        pubspecPath,
-        contents,
-        yaml);
-  }
-  
-  undepend(String packageName) {
-    removeFromGroup(bool dev) {
-      var old;
-      var depGroup = dev ? devDependencies : dependencies;
-      if(depGroup is Map) {
-        if(depGroup.containsKey(packageName)) {
-          // Remove parent node if it will be empty after this operation.
-          var isLast = depGroup.length == 1;
-          var deleteFrom = isLast ? yamlMap : depGroup;
-          var deleteKey = isLast ? (dev ? 'dev_dependencies' : 'dependencies') : packageName;
-          old = depGroup[packageName];
-          contents = deleteMapKey(_contents, deleteFrom, deleteKey);
-        }
-      }
-      print('old ($dev): $old');
-      return old;
-    }
-    var old = removeFromGroup(false);
-    if(old == null) old = removeFromGroup(true);
-    return old;
-  }
-  
-  addDependency(PackageDep dep) => _addDependency(dep, false);
-  addDevDependency(PackageDep dep) => _addDependency(dep, true);
-  _addDependency(PackageDep dep, bool dev) {
+import 'package:quiver/async.dart';
+import 'package:unscripted/unscripted.dart';
     
-    var otherDepGroup = dev ? dependencies : devDependencies;
-    var old;
-    if(otherDepGroup.containsKey(dep.name)) {
-      old = undepend(dep.name);
+/// Interact with pubspecs. 
+class Den {
+  
+  @Command(
+      allowTrailingOptions: true, 
+      help: 'Interact with pubspecs', 
+      plugins: const [const Completion()])
+  Den();
+  
+  @SubCommand(help: 'Add or modify pubspec dependencies')
+  /// Add or modify pubspec dependencies.
+  install(
+      @Rest(
+          required: true, 
+          valueHelp: 'endpoint', 
+          allowed: packageList, 
+          help: '''  Can be any of:
+
+       <name>
+       <name>#<version>
+
+-sgit         <git url>
+-sgit         <git url>#<git ref> (Derives <name> from <git url>)
+-sgit  <name>=<git url>#<git ref>
+
+-spath        <path>
+-spath <name>=<path>
+
+Where <name> should match the name: in the corresponding pubspec (avoids fetching the pubspec).
+
+For more info on <name>, <git url>, <git ref>, and <path> at:
+  https://www.dartlang.org/tools/pub/dependencies.html 
+''')
+      List<String> packages,
+      {
+      @Option(abbr: 's', allowed: const ['hosted', 'git', 'path'], help: 'The source of the package(s).')
+      String source: 'hosted',
+      @Flag(help: 'Whether this is a dev dependency.')
+      bool dev: false
+  }) {
+
+    new Future(() {
+      return Future.wait(packages
+          .map(_SplitPackage.parse)
+          .map((splitPackage) => splitPackage.getPackageDep(source)));
+    }).then((deps) {
+      // TODO: Validate existing pubspec, and fail if necessary.
+      //       See dartbug.com/21169
+      var pubspec = Pubspec.load();
+      var movedDependencies = {};
+      
+      deps.forEach((PackageDep dep) {
+        var oldDep = dev ? pubspec.addDevDependency(dep) : pubspec.addDependency(dep);
+        if(oldDep != null) movedDependencies[dep.name] = oldDep;
+      });
+      
+      new File(pubspec.path).writeAsStringSync(pubspec.contents);
+      print('Added ${dev ? 'dev_' : ''}dependencies:\n');
+      
+      var otherDepGroupKey = dev ? 'dependencies' : 'dev_dependencies';
+      deps.forEach((PackageDep dep) {
+        var buffer = new StringBuffer(dep.name);
+        buffer.write(': ');
+        buffer.write(dep.source == 'hosted' ?
+            "'${dep.constraint}'" :
+            dep.description);
+        if(movedDependencies.containsKey(dep.name)) buffer.write(' (moved from "$otherDepGroupKey")');
+        print(indent(buffer.toString(), 2));
+      });
+    });
+  }
+  
+  @SubCommand(help: 'Remove pubspec dependencies')
+  /// Remove pubspec dependencies.
+  uninstall(
+      @Rest(
+          required: true, 
+          valueHelp: 'package name', 
+          allowed: _getImmediateDependencyNames, 
+          help: 'Name of dependency to remove')
+      List<String> names) {
+    var pubspec = Pubspec.load();
+    var removedDeps = names.fold({}, (removedDeps, name) {
+      var removed = pubspec.undepend(name);
+      if(removed != null) removedDeps[name] = removed;
+      return removedDeps;
+    });
+    new File(pubspec.path).writeAsStringSync(pubspec.contents);
+    
+    if(removedDeps.isNotEmpty) {
+      print('Removed (dev_)dependencies:\n');
+      removedDeps.forEach((name, old) {
+        print('  $name: ${JSON.encode(old)}');
+      });
+    } else {
+      print('No (dev_)dependencies removed.');
     }
 
-    // TODO: Log whether we're replacing an existing dependency or adding a new one, and all dependency metadata.
-    String depSourceDescription;
-    if(dep.source == 'hosted') {
-      depSourceDescription = "'${dep.constraint}'";
-      if(dep.description is Map) {
-        // TODO: Implement for hosted dep map descriptions as well.
-        throw new UnimplementedError('Description maps are not yet implemented for adding deps from source "${dep.source}".');
+  }
+
+  @SubCommand(help: 'Fetch and display the latest versions of some or all of your dependencies')
+  /// Fetch and display the latest versions of some or all of your dependencies.
+  fetch(
+      @Rest(
+          valueHelp: 'package name', 
+          allowed: _getImmediateDependencyNames, 
+          help: 'Name of dependency to fetch')
+      List<String> names) {
+    var pubspec = Pubspec.load();
+    if(names.isEmpty) {
+      names = pubspec.immediateDependencyNames;
+      
+      if(names.isEmpty) {
+        print('There are no dependencies to fetch.');
+        return;
       }
+
     } else {
-      String description;
-      if(dep.description is Map) {
-        var descMap = dep.description;
-        if(dep.source == 'git') {
-          description = ['url', 'ref'].where(descMap.containsKey).map((descKey) => '\n  $descKey: ${descMap[descKey]}').join();
-        } else {
-          throw new ArgumentError('Description maps are not valid for deps with source "${dep.source}".');
-        }
+      var bogusDependencyNames = names.where((packageName) => !pubspec.immediateDependencyNames.contains(packageName)).toList();
+      if(bogusDependencyNames.isNotEmpty) {
+        print('Error: Can only fetch existing dependencies, which do not include: $bogusDependencyNames');
+      }
+    }
+    
+    reduceAsync(names, {}, (outdated, name) {
+      return VersionStatus.fetch(pubspec, name).then((VersionStatus status) {
+        if(status.isOutdated) outdated[name] = status;
+        return outdated;
+      });
+    }).then((Map<String, VersionStatus> outdated) {
+      if (outdated.isEmpty) {
+        print('Dependencies up-to-date.');
+        return;
+      }
+      
+      print('Outdated dependencies:\n');
+      outdated.forEach((name, status) {
+        print('$name (current: ${status.constraint}, available: ${status.primary})');
+      });
+    });
+  }
+}
+
+class _SplitPackage {
+  final String input, explicitName, body, hash;
+  
+  static var packagePattern = new RegExp(r'^(([a-zA-Z0-9_]+)=)?([^#]+)(#([^#]+))?');
+
+  static _SplitPackage parse(String package) {
+    var match = packagePattern.firstMatch(package);
+    if(match == null) throw new FormatException('Invalid package argument', package);
+    return new _SplitPackage(match.input, match.group(2), match.group(3), match.group(5));
+  }
+  
+  _SplitPackage(this.input, this.explicitName, this.body, this.hash);
+  
+  Future<PackageDep> getPackageDep(String source) => new Future(() {
+    if(source == 'hosted') {
+      // <name>#<version constraint>.
+      if(!nullOrEmpty(explicitName)) throw new FormatException('Cannot specify explicit name for hosted dependency', input);
+      var name = body;
+      return new Future(() {
+        if(hash != null) return new VersionConstraint.parse(hash);
+        return fetchPrimaryVersion(name).then(getCompatibleVersionRange);
+      }).then((VersionConstraint constraint) {
+        return new PackageDep(name, source, constraint, null);
+      });
+    };
+    
+    if(source == 'path') {
+      // <name>=<path>.
+      if(!nullOrEmpty(hash)) throw new FormatException('Cannot specify hash fragment for path dependency', input);
+      var path = body;
+      var name = explicitName;
+      if(name == null) {
+      // TODO: Get the name from the pubspec once the "files" package is ready.
+//            try {
+//              var depPubspec = Pubspec.load(path);
+//              name = depPubspec.name;
+//            } catch (e) { }
+        // Fallback to just using the basename.
+        if(name == null) name = p.basename(path);
       } else {
-        description = ' ${dep.description}';
+        // TODO: Check for valid path.
       }
-      depSourceDescription = "${dep.source}:$description";
+      return new PackageDep(name, source, null, body);
     }
-    
-    var location = dev ? 'dev_dependencies' : 'dependencies';
-    var containerValue = _yamlMap[location];
-    if(containerValue == null) {
-      contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
-    } else {
-      var ownLine = dep.description != null;
-      contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
-    }
-    return old;
-  }
-  
-  /// The [basename] of a pubpsec file.
-  static final String _PUBSPEC = "pubspec.yaml";
-  
-  /// Calculate the root of the package containing path.
-  static String _getPackageRoot(String subPath) {
-    subPath = p.absolute(subPath);
-    var segments = p.split(subPath);
-    var testPath = subPath;
-
-    // Walk up directory hierarchy until we find a pubspec.
-    for(int i = 0; i < segments.length; i++) {
-      var testDir = new Directory(testPath);
-      if(testDir.existsSync() && testDir.listSync().any((fse) =>
-          p.basename(fse.path) == _PUBSPEC)) {
-        return testPath;
+    if(source == 'git') {
+      // <name>=<git uri>#<ref>.
+      var ref = hash;
+      var gitUri = body;
+      var name = explicitName;
+      // TODO: Check for valid git uri.
+      // TODO: Actually do the git clone, add to pub cache, and use the name from the pubspec.yaml?
+      if(name == null) {
+        name = p.basenameWithoutExtension(Uri.parse(gitUri).pathSegments.last);
       }
-      testPath = p.dirname(testPath);
+      var description = ref == null ?
+          gitUri : 
+          {
+            'url': gitUri,
+            'ref': ref
+          };
+      return new PackageDep(name, source, null, description);
     }
-
-    throw new ArgumentError(
-        "No package root (containing pubspec.yaml) "
-        "found in hierarchy of path: $subPath");
-  }
+  });
 }
 
-/// This is the private base class of [PackageRef], [PackageID], and
-/// [PackageDep].
-///
-/// It contains functionality and state that those classes share but is private
-/// so that from outside of this library, there is no type relationship between
-/// those three types.
-class _PackageName {
-  _PackageName(this.name, this.source, this.description);
-  
-  /// The name of the package being identified.
-  final String name;
-  
-  /// The name of the [Source] used to look up this package given its
-  /// [description].
-  ///
-  /// If this is a root package, this will be `null`.
-  final String source;
-  
-  /// The metadata used by the package's [source] to identify and locate it.
-  ///
-  /// It contains whatever [Source]-specific data it needs to be able to get
-  /// the package. For example, the description of a git sourced package might
-  /// by the URL "git://github.com/dart/uilib.git".
-  final description;
-  
-  /// Whether this package is the root package.
-  bool get isRoot => source == null;
-  
-  String toString() {
-    if (isRoot) return "$name (root)";
-    return "$name from $source";
-  }
-  
-  /// Returns a [PackageDep] for this package with the given version constraint.
-  PackageDep withConstraint(VersionConstraint constraint) =>
-    new PackageDep(name, source, constraint, description);
-}
-
-/// A reference to a constrained range of versions of one package.
-class PackageDep extends _PackageName {
-  /// The allowed package versions.
-  final VersionConstraint constraint;
-  
-  PackageDep(String name, String source, this.constraint, description)
-      : super(name, source, description);
-  
-  String toString() {
-    if (isRoot) return "$name $constraint (root)";
-    return "$name $constraint from $source ($description)";
-  }
-  
-  int get hashCode => name.hashCode ^ source.hashCode;
-  
-  bool operator ==(other) {
-    // TODO(rnystrom): We're assuming here that we don't need to delve into the
-    // description.
-    return other is PackageDep &&
-           other.name == name &&
-           other.source == source &&
-           other.constraint == constraint;
-  }
-}
+List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;

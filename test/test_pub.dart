@@ -1,5 +1,5 @@
 
-import 'package:den/den.dart';
+import 'package:den/src/pub.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:unittest/unittest.dart';
