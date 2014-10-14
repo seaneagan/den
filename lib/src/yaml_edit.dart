@@ -9,16 +9,48 @@ import 'util.dart';
 String deleteMapKey(String yaml, YamlMap mapNode, String key) {
 
   if(!mapNode.containsKey(key)) return yaml;
-  var keyNode = mapNode.nodes.keys.firstWhere((keyNode) => keyNode.value == key);
+  YamlNode previousValueNode, keyNode, nextKeyNode;
+  var keyNodeIterator = mapNode.nodes.keys.iterator;
+  while(keyNodeIterator.moveNext()) {
+    var curr = keyNodeIterator.current;
+    print('key: ${curr.value}');
+    if(curr.value == key) {
+      keyNode = curr;
+      if(keyNodeIterator.moveNext()) {
+        nextKeyNode = curr;
+      }
+      break;
+    }
+    previousValueNode = mapNode.nodes[curr];
+  }
+  
+  // TODO: Support flow mappings once http://dartbug.com/21328 is fixed.
+//  var isFlow = isFlowMapping(yaml, mapNode);
+//  
+//  getEndIndex(YamlNode valueNode, YamlNode nextKeyNode) {
+//    var valueEndIndex = valueNode.span.end.offset;
+//    if(isFlow) {
+//      // Consume trailing comma if there is one.
+//      return nextKeyNode == null ? 
+//          mapNode.span.end.offset : 
+//          nextKeyNode.span.start.offset;
+//    }
+//    // Consume trailing newline and any trailing comment.
+//    var endIndex = yaml.indexOf('\n', valueEndIndex - 1) + 1;
+//    return endIndex == -1 ? yaml.length : endIndex;
+//  }
+  
   var valueNode = mapNode.nodes[key];
-  // - 1 to remove preceding newline as well.
-  // TODO: Is there ever a case where there is no newline?
-  var startIndex = (keyNode.span.start.offset - keyNode.span.start.column) - 1;
-  var endIndex = valueNode.span.end.offset;
+//  var removePreviousSeparator = nextKeyNode == null;
+//  var startIndex = removePreviousSeparator ?
+//      getEndIndex(previousValueNode, keyNode) :
+//      keyNode.span.start.offset;
+//  var endIndex = getEndIndex(valueNode, nextKeyNode);
+  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
+  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
     
   return yaml.substring(0, startIndex) + yaml.substring(endIndex);
 }
-
 
 String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) {
   var startLocation, endLocation, insertion;
@@ -66,4 +98,8 @@ String replaceSpan(String wholeText, String newText, SourceLocation start, Sourc
       ..write(newText)
       ..write(wholeText.substring(end.offset)))
       .toString();
+}
+
+bool isFlowMapping(String yaml, YamlMap map) {
+  return yaml[map.span.start.offset] == '{';
 }

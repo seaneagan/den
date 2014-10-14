@@ -133,6 +133,31 @@ dev_dependencies:
     });
   });
   
+  group('undepend', () {
+    
+    test('should remove a dependency', () {
+      var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
+      pubspec.undepend('baz');
+      expect(pubspec.contents, '''
+$preamble
+dependencies:
+  bar: any
+dev_dependencies:
+  unittest: any
+''');
+    });
+
+    test('should remove the dependency group node when it becomes empty', () {
+      var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
+      pubspec.undepend('unittest');
+      expect(pubspec.contents, '''
+$preamble
+dependencies:
+  bar: any
+  baz: '>=1.0.0 <2.0.0' # Comment
+''');
+    });
+  });
 }
 
 testAddDependency(PackageDep dependency, String originalContents, String expectedNewContents) {

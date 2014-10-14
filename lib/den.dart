@@ -53,20 +53,38 @@ class Pubspec {
         yaml);
   }
   
-  void undepend(String packageName, {bool dev: false}) {
-    var depGroup = dev ? devDependencies : dependencies;
-    // Remove parent node if it will be empty after this operation.
-    if(depGroup is Map) {
-      var isLast = depGroup.length == 1 && depGroup.containsKey(packageName);
-      var deleteFrom = isLast ? yamlMap : depGroup;
-      var deleteKey = isLast ? (dev ? 'dev_dependencies' : 'dependencies') : packageName;
-      contents = deleteMapKey(_contents, deleteFrom, deleteKey);
+  undepend(String packageName) {
+    removeFromGroup(bool dev) {
+      var old;
+      var depGroup = dev ? devDependencies : dependencies;
+      if(depGroup is Map) {
+        if(depGroup.containsKey(packageName)) {
+          // Remove parent node if it will be empty after this operation.
+          var isLast = depGroup.length == 1;
+          var deleteFrom = isLast ? yamlMap : depGroup;
+          var deleteKey = isLast ? (dev ? 'dev_dependencies' : 'dependencies') : packageName;
+          old = depGroup[packageName];
+          contents = deleteMapKey(_contents, deleteFrom, deleteKey);
+        }
+      }
+      print('old ($dev): $old');
+      return old;
     }
+    var old = removeFromGroup(false);
+    if(old == null) old = removeFromGroup(true);
+    return old;
   }
   
-  void addDependency(PackageDep dep) => _addDependency(dep, 'dependencies');
-  void addDevDependency(PackageDep dep) => _addDependency(dep, 'dev_dependencies');
-  void _addDependency(PackageDep dep, String location) {
+  addDependency(PackageDep dep) => _addDependency(dep, false);
+  addDevDependency(PackageDep dep) => _addDependency(dep, true);
+  _addDependency(PackageDep dep, bool dev) {
+    
+    var otherDepGroup = dev ? dependencies : devDependencies;
+    var old;
+    if(otherDepGroup.containsKey(dep.name)) {
+      old = undepend(dep.name);
+    }
+
     // TODO: Log whether we're replacing an existing dependency or adding a new one, and all dependency metadata.
     String depSourceDescription;
     if(dep.source == 'hosted') {
@@ -90,6 +108,7 @@ class Pubspec {
       depSourceDescription = "${dep.source}:$description";
     }
     
+    var location = dev ? 'dev_dependencies' : 'dependencies';
     var containerValue = _yamlMap[location];
     if(containerValue == null) {
       contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
@@ -97,6 +116,7 @@ class Pubspec {
       var ownLine = dep.description != null;
       contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
     }
+    return old;
   }
   
   /// The [basename] of a pubpsec file.
