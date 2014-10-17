@@ -12,7 +12,9 @@ import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:quiver/async.dart';
 import 'package:unscripted/unscripted.dart';
-    
+
+import 'src/theme.dart';
+
 /// Interact with pubspecs. 
 class Den {
   
@@ -69,20 +71,22 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
         if(oldDep != null) movedDependencies[dep.name] = oldDep;
       });
       
-      new File(pubspec.path).writeAsStringSync(pubspec.contents);
-      print('Added ${dev ? 'dev_' : ''}dependencies:\n');
+      pubspec.save();
       
       var otherDepGroupKey = dev ? 'dependencies' : 'dev_dependencies';
+      var buffer = new StringBuffer();
       deps.forEach((PackageDep dep) {
-        var buffer = new StringBuffer(dep.name);
-        buffer.write(': ');
-        buffer.write(dep.source == 'hosted' ?
-            "'${dep.constraint}'" :
-            dep.description);
+        buffer
+            ..write('  ${theme.dependency(dep.name)}: ')
+            ..write(theme.version(dep.source == 'hosted' ?
+                "'${dep.constraint}'" :
+                dep.description));
         if(movedDependencies.containsKey(dep.name)) buffer.write(' (moved from "$otherDepGroupKey")');
-        print(indent(buffer.toString(), 2));
+        buffer.write('\n');
       });
+      print(block('Installed these ${dev ? 'dev_' : ''}dependencies', buffer.toString()));
     });
+    
   }
   
   @SubCommand(help: 'Remove pubspec dependencies')
@@ -100,13 +104,15 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       if(removed != null) removedDeps[name] = removed;
       return removedDeps;
     });
-    new File(pubspec.path).writeAsStringSync(pubspec.contents);
+
+    pubspec.save();
     
     if(removedDeps.isNotEmpty) {
-      print('Removed (dev_)dependencies:\n');
+      var buffer = new StringBuffer();
       removedDeps.forEach((name, old) {
-        print('  $name: ${JSON.encode(old)}');
+        buffer.writeln('  ${theme.dependency(name)}${theme.info(': ')}${theme.version(JSON.encode(old))}');
       });
+      print(block('Uninstalled these dependencies', buffer.toString()));
     } else {
       print('No (dev_)dependencies removed.');
     }
@@ -118,22 +124,21 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
   fetch(
       @Rest(
           valueHelp: 'package name', 
-          allowed: _getImmediateDependencyNames, 
+          allowed: _getHostedDependencyNames, 
           help: 'Name of dependency to fetch')
-      List<String> names) {
+      Iterable<String> names) {
     var pubspec = Pubspec.load();
     if(names.isEmpty) {
-      names = pubspec.immediateDependencyNames;
-      
+      names = pubspec.versionConstraints.keys;
       if(names.isEmpty) {
         print('There are no dependencies to fetch.');
         return;
       }
-
     } else {
-      var bogusDependencyNames = names.where((packageName) => !pubspec.immediateDependencyNames.contains(packageName)).toList();
+      var bogusDependencyNames = names.where((packageName) => !pubspec.versionConstraints.containsKey(packageName)).toList();
       if(bogusDependencyNames.isNotEmpty) {
-        print('Error: Can only fetch existing dependencies, which do not include: $bogusDependencyNames');
+        print('Error: Can only fetch existing hosted dependencies, which do not include: $bogusDependencyNames');
+        return;
       }
     }
     
@@ -144,14 +149,15 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       });
     }).then((Map<String, VersionStatus> outdated) {
       if (outdated.isEmpty) {
-        print('Dependencies up-to-date.');
+        print('\nDependencies up-to-date.');
         return;
       }
       
-      print('Outdated dependencies:\n');
+      var buffer = new StringBuffer();
       outdated.forEach((name, status) {
-        print('$name (current: ${status.constraint}, available: ${status.primary})');
+        buffer.writeln('${theme.dependency(name)}${theme.info(' (constraint: ')}${theme.version(status.constraint.toString())}${theme.info(', latest: ')}${theme.version(status.primary.toString())}${theme.info(')')}');
       });
+      print(block('Outdated dependencies', buffer.toString()));
     });
   }
 }
@@ -222,3 +228,4 @@ class _SplitPackage {
 }
 
 List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;
+List<String> _getHostedDependencyNames() => Pubspec.load().versionConstraints.keys.toList();

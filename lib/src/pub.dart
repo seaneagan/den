@@ -43,15 +43,26 @@ class Pubspec {
       ..addAll(dependencies.keys)
       ..addAll(devDependencies.keys);
   
-  VersionConstraint getVersionConstraint(String dependencyName) {
-    VersionConstraint constraint;
-    if(dependencies.containsKey(dependencyName)) {
-      constraint = parseVersionConstraint(dependencies[dependencyName]);
-    } else if(devDependencies.containsKey(dependencyName)) {
-      constraint = parseVersionConstraint(devDependencies[dependencyName]);
+  Map<String, VersionConstraint> get versionConstraints {
+    if (_versionConstraints == null) {
+      _versionConstraints = {};
+      addGroup(Map<String, dynamic> group) {
+        group.forEach((name, description) {
+          VersionConstraint constraint;
+          if(description is String) constraint = parseVersionConstraint(description);
+          if(description is Map && description.length == 1 && description.containsKey('hosted')) {
+            constraint = description['hosted']['version'];
+          }
+          if(constraint != null) _versionConstraints[name] = constraint;
+        });
+      }
+      addGroup(dependencies);
+      addGroup(devDependencies);
+      addGroup(dependencyOverrides);
     }
-    return constraint;
+    return _versionConstraints;
   }
+  Map<String, VersionConstraint> _versionConstraints;
 
   Pubspec(
       this._path,
@@ -132,6 +143,10 @@ class Pubspec {
       contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
     }
     return old;
+  }
+  
+  void save() {
+    new File(path).writeAsStringSync(contents);
   }
   
   /// The [basename] of a pubpsec file.
@@ -247,7 +262,7 @@ class VersionStatus {
   VersionStatus._(this._versions, this.constraint);
   
   static Future<VersionStatus> fetch(Pubspec pubspec, String packageName) {
-    var constraint = pubspec.getVersionConstraint(packageName);
+    var constraint = pubspec.versionConstraints[packageName];
     return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
       return new VersionStatus._(package.versions, constraint);
     });
@@ -262,7 +277,7 @@ VersionRange getCompatibleVersionRange(Version version) =>
 
 Future<Version> fetchPrimaryVersion(String packageName) {
   return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
-    return getCompatibleVersionRange(Version.primary(package.versions));
+    return Version.primary(package.versions);
   });
 }
 

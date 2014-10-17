@@ -1,4 +1,6 @@
 
+library den.util;
+
 bool nullOrEmpty(String str) => str == null || str.isEmpty; 
 
 String indent(String str, int indent) {
