@@ -3,7 +3,6 @@ library den;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:den/src/pub.dart';
 import 'package:den/src/util.dart';
@@ -67,7 +66,7 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       var movedDependencies = {};
       
       deps.forEach((PackageDep dep) {
-        var oldDep = dev ? pubspec.addDevDependency(dep) : pubspec.addDependency(dep);
+        var oldDep = pubspec.addDependency(dep, dev: dev);
         if(oldDep != null) movedDependencies[dep.name] = oldDep;
       });
       
@@ -128,28 +127,12 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
           help: 'Name of dependency to fetch')
       Iterable<String> names) {
     var pubspec = Pubspec.load();
-    if(names.isEmpty) {
-      names = pubspec.versionConstraints.keys;
-      if(names.isEmpty) {
-        print('There are no dependencies to fetch.');
-        return;
-      }
-    } else {
-      var bogusDependencyNames = names.where((packageName) => !pubspec.versionConstraints.containsKey(packageName)).toList();
-      if(bogusDependencyNames.isNotEmpty) {
-        print('Error: Can only fetch existing hosted dependencies, which do not include: $bogusDependencyNames');
-        return;
-      }
+    onInvalid(Iterable<String> invalid) {
+      print('Can only fetch existing hosted dependencies, which do not include: $invalid');
     }
-    
-    reduceAsync(names, {}, (outdated, name) {
-      return VersionStatus.fetch(pubspec, name).then((VersionStatus status) {
-        if(status.isOutdated) outdated[name] = status;
-        return outdated;
-      });
-    }).then((Map<String, VersionStatus> outdated) {
+    _fetch(pubspec, names, onInvalid).then((Map<String, VersionStatus> outdated) {
       if (outdated.isEmpty) {
-        print('\nDependencies up-to-date.');
+        print('\nDependencies are up to date.');
         return;
       }
       
@@ -160,6 +143,59 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       print(block('Outdated dependencies', buffer.toString()));
     });
   }
+
+  @SubCommand(help: 'Pull-in the latest versions of some or all of your dependencies')
+  /// Pull-in the latest versions of some or all of your dependencies.
+  pull(
+      @Rest(
+          valueHelp: 'package name', 
+          allowed: _getHostedDependencyNames, 
+          help: 'Name of dependency to pull')
+      Iterable<String> names) {
+    var pubspec = Pubspec.load();
+    onInvalid(Iterable<String> invalid) {
+      print('Can only pull existing hosted dependencies, which do not include: $invalid');
+    }
+    _fetch(pubspec, names, onInvalid).then((Map<String, VersionStatus> outdated) {
+      if (outdated.isEmpty) {
+        print('\nDependencies were already up to date.');
+        return;
+      }
+      
+      var buffer = new StringBuffer();
+      outdated.forEach((name, status) {
+        var updatedConstraint = status.getUpdatedConstraint();
+        pubspec.addDependency(new PackageDep(name, 'hosted', updatedConstraint, null), dev: status.dev);
+        buffer.writeln('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
+      });
+      
+      pubspec.save();
+      
+      print(block('Updated dependencies', buffer.toString()));
+    });
+  }
+  
+  Future<Map<String, VersionStatus>> _fetch(Pubspec pubspec, Iterable<String> names, onInvalid(Iterable<String> invalid)) => new Future(() {
+    if(names.isEmpty) {
+      names = pubspec.versionConstraints.keys;
+      if(names.isEmpty) {
+        return {};
+      }
+    } else {
+      var bogusDependencyNames = names.where((packageName) => !pubspec.versionConstraints.containsKey(packageName)).toList();
+      if(bogusDependencyNames.isNotEmpty) {
+        onInvalid(bogusDependencyNames);
+        return {};
+      }
+    }
+    
+    return reduceAsync(names, {}, (outdated, name) {
+      return VersionStatus.fetch(pubspec, name).then((VersionStatus status) {
+        if(status.isOutdated) outdated[name] = status;
+        return outdated;
+      });
+    });
+  });
 }
 
 class _SplitPackage {

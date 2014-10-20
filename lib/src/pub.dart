@@ -101,9 +101,7 @@ class Pubspec {
     return old;
   }
   
-  addDependency(PackageDep dep) => _addDependency(dep, false);
-  addDevDependency(PackageDep dep) => _addDependency(dep, true);
-  _addDependency(PackageDep dep, bool dev) {
+  addDependency(PackageDep dep, {bool dev: false}) {
     
     var otherDepGroup = dev ? dependencies : devDependencies;
     var old;
@@ -240,12 +238,13 @@ class PackageDep extends _PackageName {
 class VersionStatus {
   
   final VersionConstraint constraint;
+  final bool dev;
   final List<Version> _versions;
   Version get primary => Version.primary(_versions);
   Version get latest => maxOf(_versions);
   bool get isOutdated => !constraint.allows(primary);
   
-  VersionConstraint getUpdatedConstraint({bool unstable: false, bool keepMin}) {
+  VersionConstraint getUpdatedConstraint({bool unstable: false, bool keepMin: false}) {
     var updateTo = unstable ? latest : primary;
     if(constraint.allows(updateTo)) return constraint;
     var min = keepMin ? 
@@ -259,12 +258,13 @@ class VersionStatus {
     return new VersionRange(min: min, max: getNextBreakingVersion(updateTo), includeMin: includeMin);
   }
   
-  VersionStatus._(this._versions, this.constraint);
+  VersionStatus._(this._versions, this.constraint, this.dev);
   
   static Future<VersionStatus> fetch(Pubspec pubspec, String packageName) {
     var constraint = pubspec.versionConstraints[packageName];
+    var dev = pubspec.devDependencies.containsKey(packageName);
     return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
-      return new VersionStatus._(package.versions, constraint);
+      return new VersionStatus._(package.versions, constraint, dev);
     });
   }
 }

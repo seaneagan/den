@@ -115,13 +115,11 @@ dev_dependencies:
   unittest: any
 ''');
   });
-
-  group('addDevDependency', () {
     
-    test('should add a dev dependency', () {
-      var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
-      pubspec.addDevDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null));
-      expect(pubspec.contents, '''
+  test('should add a dev dependency when dev is true', () {
+    var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
+    pubspec.addDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null), dev: true);
+    expect(pubspec.contents, '''
 $preamble
 dependencies:
   bar: any
@@ -130,7 +128,6 @@ dev_dependencies:
   unittest: any
   abc: '1.0.0'
 ''');
-    });
   });
   
   group('undepend', () {
