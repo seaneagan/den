@@ -144,6 +144,28 @@ dev_dependencies:
 ''');
     });
 
+    test('should error when trying to remove a dependency from a yaml flow mapping', () {
+      var flowMapping = '''
+$preamble
+dependencies: {
+  bar: any,
+  baz: any
+}
+dev_dependencies:
+  unittest: any
+''';
+      var pubspec = new Pubspec(null, flowMapping, loadYamlNode(pubspecContents));
+      expect(() => pubspec.undepend('bar'), throwsUnimplementedError);
+//      expect(pubspec.contents, '''
+//$preamble
+//dependencies: {
+//  bar: any
+//}
+//dev_dependencies:
+//  unittest: any
+//''');
+    });
+
     test('should remove the dependency group node when it becomes empty', () {
       var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
       pubspec.undepend('unittest');

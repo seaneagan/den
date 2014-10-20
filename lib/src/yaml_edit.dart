@@ -10,50 +10,58 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
 
   if(!mapNode.containsKey(key)) return yaml;
   YamlNode previousValueNode, keyNode, nextKeyNode;
-  var keyNodeIterator = mapNode.nodes.keys.iterator;
+  var orderedKeys = mapNode.nodes.keys.toList()..sort((a, b) => a.span.compareTo(b.span));
+  print('orderedKeys: $orderedKeys');
+  
+  var keyNodeIterator = orderedKeys.iterator;
   while(keyNodeIterator.moveNext()) {
     var curr = keyNodeIterator.current;
     if(curr.value == key) {
       keyNode = curr;
       if(keyNodeIterator.moveNext()) {
-        nextKeyNode = curr;
+        nextKeyNode = keyNodeIterator.current;
       }
       break;
     }
     previousValueNode = mapNode.nodes[curr];
   }
   
-  // TODO: Support flow mappings once http://dartbug.com/21328 is fixed.
-//  var isFlow = isFlowMapping(yaml, mapNode);
-//  
-//  getEndIndex(YamlNode valueNode, YamlNode nextKeyNode) {
-//    var valueEndIndex = valueNode.span.end.offset;
-//    if(isFlow) {
-//      // Consume trailing comma if there is one.
-//      return nextKeyNode == null ? 
-//          mapNode.span.end.offset : 
-//          nextKeyNode.span.start.offset;
-//    }
-//    // Consume trailing newline and any trailing comment.
-//    var endIndex = yaml.indexOf('\n', valueEndIndex - 1) + 1;
-//    return endIndex == -1 ? yaml.length : endIndex;
-//  }
+  var isFlow = isFlowMapping(yaml, mapNode);
+  // TODO: Support flow mappings.  (See also http://dartbug.com/21328 is fixed.)
+  if(isFlow) throw new UnimplementedError('Editing flow mappings is not yet supported.');
+  
+  getEndIndex(YamlNode valueNode, YamlNode nextKeyNode) {
+    var valueEndIndex = valueNode.span.end.offset;
+    if(isFlow) {
+      // Consume trailing comma if there is one.
+      return nextKeyNode == null ? 
+          mapNode.span.end.offset : 
+          nextKeyNode.span.start.offset;
+    }
+    // Consume trailing newline and any trailing comment.
+    var endIndex = yaml.indexOf('\n', valueEndIndex - 1) + 1;
+    return endIndex == -1 ? yaml.length : endIndex;
+  }
   
   var valueNode = mapNode.nodes[key];
-//  var removePreviousSeparator = nextKeyNode == null;
-//  var startIndex = removePreviousSeparator ?
-//      getEndIndex(previousValueNode, keyNode) :
-//      keyNode.span.start.offset;
-//  var endIndex = getEndIndex(valueNode, nextKeyNode);
-  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
-  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
+  var removePreviousSeparator = nextKeyNode == null;
+  var startIndex = removePreviousSeparator ?
+      getEndIndex(previousValueNode, keyNode) :
+      keyNode.span.start.offset;
+  var endIndex = getEndIndex(valueNode, nextKeyNode);
+  var removed = yaml.substring(startIndex, endIndex);
+  
+//  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
+//  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
     
   return yaml.substring(0, startIndex) + yaml.substring(endIndex);
 }
 
 String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) {
   var startLocation, endLocation, insertion;
-  if(mapNode.isEmpty) throw new UnimplementedError("Editing empty flow mappings e.g. {} is not yet implemented.");
+  var isFlow = isFlowMapping(yaml, mapNode);
+  // TODO: Support flow mappings.
+  if(isFlow) throw new UnimplementedError('Editing flow mappings is not yet supported.');
   if(mapNode.containsKey(key)) {
     var valueNode = mapNode.nodes[key];
     startLocation = valueNode.span.start;
