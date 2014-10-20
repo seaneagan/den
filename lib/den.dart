@@ -38,16 +38,17 @@ class Den {
               <name>
               <name>#<version>
               
-              <git url>                  -sgit  (Derives <name> from <git url>)
-              <git url>#<git ref>        -sgit
+                     <git url>           -sgit  (Derives <name> from <git url>)
+                     <git url>#<git ref> -sgit
               <name>=<git url>#<git ref> -sgit
               
-              <path>                     -spath (Derives <name> from <path>)
+                     <path>              -spath (Derives <name> from <path>)
               <name>=<path>              -spath
               
-              Where <name> should match the name: in the corresponding pubspec (avoids fetching the pubspec).
+              Where <name> should match the name: in the corresponding pubspec
+              (avoids fetching the pubspec).
               
-              For more info on <name>, <git url>, <git ref>, and <path> at:
+              For more info on <name>, <git url>, <git ref>, and <path>, see:
                 https://www.dartlang.org/tools/pub/dependencies.html 
 ''')
       List<String> packages,
