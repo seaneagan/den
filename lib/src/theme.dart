@@ -14,9 +14,9 @@ class DenTheme {
 
 final theme = new DenTheme();
 
-String block(String title, String body) => '''
+String block(String title, Iterable<String> lines) => '''
 
-${theme.title(title)}
+${theme.title(title + ':')}
 
-$body
+${lines.map((line) => '  $line').join('\n')}
 ''';

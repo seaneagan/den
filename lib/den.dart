@@ -73,17 +73,18 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       pubspec.save();
       
       var otherDepGroupKey = dev ? 'dependencies' : 'dev_dependencies';
-      var buffer = new StringBuffer();
+      var lines = [];
       deps.forEach((PackageDep dep) {
+        var buffer = new StringBuffer();
         buffer
-            ..write('  ${theme.dependency(dep.name)}: ')
+            ..write('${theme.dependency(dep.name)}: ')
             ..write(theme.version(dep.source == 'hosted' ?
                 "'${dep.constraint}'" :
                 dep.description));
-        if(movedDependencies.containsKey(dep.name)) buffer.write(' (moved from "$otherDepGroupKey")');
-        buffer.write('\n');
+        if(movedDependencies.containsKey(dep.name)) buffer.write(theme.info(' (moved from "$otherDepGroupKey")'));
+        lines.add(buffer.toString());
       });
-      print(block('Installed these ${dev ? 'dev_' : ''}dependencies', buffer.toString()));
+      print(block('Installed these ${dev ? 'dev_' : ''}dependencies', lines));
     });
     
   }
@@ -108,10 +109,11 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
     
     if(removedDeps.isNotEmpty) {
       var buffer = new StringBuffer();
+      var lines = [];
       removedDeps.forEach((name, old) {
-        buffer.writeln('  ${theme.dependency(name)}${theme.info(': ')}${theme.version(JSON.encode(old))}');
+        lines.add('${theme.dependency(name)}${theme.info(': ')}${theme.version(JSON.encode(old))}');
       });
-      print(block('Uninstalled these dependencies', buffer.toString()));
+      print(block('Uninstalled these dependencies', lines));
     } else {
       print('No (dev_)dependencies removed.');
     }
@@ -124,7 +126,7 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       @Rest(
           valueHelp: 'package name', 
           allowed: _getHostedDependencyNames, 
-          help: 'Name of dependency to fetch')
+          help: 'Name of dependency to fetch.  If omitted, then fetches all dependencies in the pubspec.')
       Iterable<String> names) {
     var pubspec = Pubspec.load();
     onInvalid(Iterable<String> invalid) {
@@ -136,11 +138,11 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
         return;
       }
       
-      var buffer = new StringBuffer();
+      var lines = [];
       outdated.forEach((name, status) {
-        buffer.writeln('${theme.dependency(name)}${theme.info(' (constraint: ')}${theme.version(status.constraint.toString())}${theme.info(', latest: ')}${theme.version(status.primary.toString())}${theme.info(')')}');
+        lines.add('${theme.dependency(name)}${theme.info(' (constraint: ')}${theme.version(status.constraint.toString())}${theme.info(', latest: ')}${theme.version(status.primary.toString())}${theme.info(')')}');
       });
-      print(block('Outdated dependencies', buffer.toString()));
+      print(block('Outdated dependencies', lines));
     });
   }
 
@@ -150,7 +152,7 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
       @Rest(
           valueHelp: 'package name', 
           allowed: _getHostedDependencyNames, 
-          help: 'Name of dependency to pull')
+          help: 'Name of dependency to pull.  If omitted, then pulls all dependencies in the pubspec.')
       Iterable<String> names) {
     var pubspec = Pubspec.load();
     onInvalid(Iterable<String> invalid) {
@@ -162,16 +164,16 @@ For more info on <name>, <git url>, <git ref>, and <path> at:
         return;
       }
       
-      var buffer = new StringBuffer();
+      var lines = [];
       outdated.forEach((name, status) {
         var updatedConstraint = status.getUpdatedConstraint();
         pubspec.addDependency(new PackageDep(name, 'hosted', updatedConstraint, null), dev: status.dev);
-        buffer.writeln('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
+        lines.add('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
       });
       
       pubspec.save();
       
-      print(block('Updated dependencies', buffer.toString()));
+      print(block('Updated dependencies', lines));
     });
   }
   
