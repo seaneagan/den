@@ -4,15 +4,15 @@ library den;
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:den/src/pub.dart';
-import 'package:den/src/util.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:quiver/async.dart';
 import 'package:unscripted/unscripted.dart';
 
-import 'src/theme.dart';
+import 'pub.dart';
+import 'theme.dart';
+import 'util.dart';
 
 class Den {
   

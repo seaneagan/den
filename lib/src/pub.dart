@@ -1,5 +1,5 @@
 
-library den;
+library den.pub;
 
 import 'dart:async';
 import 'dart:io';
