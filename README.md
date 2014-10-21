@@ -11,6 +11,17 @@ pub global activate den
 
 ##Usage
 
+###Package Authors
+
+Use the following as your package installation instructions in your README:
+
+```shell
+pub global activate den
+den install <your package name>
+```
+
+###End Users
+
 ```shell
 # Note: `den ...` requires Dart 1.7, on Dart 1.6 use `pub global run den ...`
 
