@@ -14,17 +14,15 @@ import 'package:unscripted/unscripted.dart';
 
 import 'src/theme.dart';
 
-/// Interact with pubspecs. 
 class Den {
   
   @Command(
       allowTrailingOptions: true, 
-      help: 'Interact with pubspecs', 
+      help: 'Pubspec editing and analysis', 
       plugins: const [const Completion()])
   Den();
   
-  @SubCommand(help: 'Add or modify pubspec dependencies')
-  /// Add or modify pubspec dependencies.
+  @SubCommand(help: 'Add or modify dependencies')
   install(
       @Rest(
           required: true, 
@@ -33,7 +31,7 @@ class Den {
           // TODO: Unindent once the following bugs are fixed:
           //   http://github.com/seaneagan/unscripted/81
           //   http://github.com/seaneagan/unscripted/82
-          help: '''  Can be any of:
+          help: '''Can be any of:
 
               <name>
               <name>#<version>
@@ -93,8 +91,7 @@ class Den {
     
   }
   
-  @SubCommand(help: 'Remove pubspec dependencies')
-  /// Remove pubspec dependencies.
+  @SubCommand(help: 'Remove dependencies')
   uninstall(
       @Rest(
           required: true, 
@@ -124,8 +121,7 @@ class Den {
 
   }
 
-  @SubCommand(help: 'Fetch and display the latest versions of some or all of your dependencies')
-  /// Fetch and display the latest versions of some or all of your dependencies.
+  @SubCommand(help: 'Show any outdated dependencies')
   fetch(
       @Rest(
           valueHelp: 'package name', 
@@ -150,8 +146,7 @@ class Den {
     });
   }
 
-  @SubCommand(help: 'Pull-in the latest versions of some or all of your dependencies')
-  /// Pull-in the latest versions of some or all of your dependencies.
+  @SubCommand(help: 'Update any outdated dependencies')
   pull(
       @Rest(
           valueHelp: 'package name', 
