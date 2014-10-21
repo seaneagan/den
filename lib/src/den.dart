@@ -18,7 +18,7 @@ class Den {
   
   @Command(
       allowTrailingOptions: true, 
-      help: 'Pubspec editing and analysis', 
+      help: 'Automate common pubspec editing tasks', 
       plugins: const [const Completion()])
   Den();
   
