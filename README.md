@@ -1,7 +1,7 @@
 den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.org/packages/den) [![Build Status](https://drone.io/github.com/seaneagan/den/status.png)](https://drone.io/github.com/seaneagan/den/latest)
 ===
 
-Den allows you to do pub-like things from within the comfort and convenience of your own home (if your home is the command line).
+Den allows you to do pub-like things, such as making updates to your pubspec, from within the comfort and convenience of your own home (if your home is the command line).
 
 ##Install
 
