@@ -1,7 +1,7 @@
 den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.org/packages/den) [![Build Status](https://drone.io/github.com/seaneagan/den/status.png)](https://drone.io/github.com/seaneagan/den/latest)
 ===
 
-Pubspec editing and analysis.
+Den allows you to do pub-like things from within the comfort and convenience of your own home (if your home is the command line).
 
 ##Install
 
@@ -34,9 +34,15 @@ den fetch polymer
 den pull
 den pull polymer
 
-# Install comprehensive tab-completion for den of
-# package names, commands, options, flags, etc.
+# Install comprehensive TAB-completion for den
 den completion install
+
+# Complete commands, options, package names, etc.
+den i[TAB] -> install
+den install unit[TAB] -> unittest
+den uninstall j[TAB] -> junk
+den fetch p[TAB] -> polymer
+den pull p[TAB] -> polymer
 ```
 
 ##Inspiration
