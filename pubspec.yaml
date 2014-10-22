@@ -1,7 +1,7 @@
 name: den
 version: 0.1.1
 author: Sean Eagan <seaneagan1@gmail.com>
-description: Den is a place for doing pub-related things, like updating your pubspec, from within the comfort and convenience of your own home (if your home is the command line).
+description: Den provides a homier experience for many common pub traditions including adding, removing, and updating pubspec dependencies.
 homepage: https://github.com/seaneagan/den
 dependencies:
   ansicolor: any

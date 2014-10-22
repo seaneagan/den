@@ -1,7 +1,7 @@
 den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.org/packages/den) [![Build Status](https://drone.io/github.com/seaneagan/den/status.png)](https://drone.io/github.com/seaneagan/den/latest)
 ===
 
-Den is a place for doing pub-related things, like updating your pubspec, from within the comfort and convenience of your own home (if your home is the command line).
+Den provides a homier experience for many common pub traditions including adding, removing, and updating pubspec dependencies.
 
 ##Install
 
@@ -13,7 +13,7 @@ pub global activate den
 
 ###Package Authors
 
-Use the following as your package installation instructions in your README:
+Add the following package installation instructions to your README:
 
 ```shell
 pub global activate den
