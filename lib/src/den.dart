@@ -15,19 +15,19 @@ import 'theme.dart';
 import 'util.dart';
 
 class Den {
-  
+
   @Command(
-      allowTrailingOptions: true, 
-      help: 'Automate common pubspec editing tasks', 
+      allowTrailingOptions: true,
+      help: 'A pubspec authoring tool',
       plugins: const [const Completion()])
   Den();
-  
+
   @SubCommand(help: 'Add or modify dependencies')
   install(
       @Rest(
-          required: true, 
-          valueHelp: 'endpoint', 
-          allowed: packageList, 
+          required: true,
+          valueHelp: 'endpoint',
+          allowed: packageList,
           // TODO: Unindent once the following bugs are fixed:
           //   http://github.com/seaneagan/unscripted/81
           //   http://github.com/seaneagan/unscripted/82
@@ -66,14 +66,14 @@ class Den {
       //       See dartbug.com/21169
       var pubspec = Pubspec.load();
       var movedDependencies = {};
-      
+
       deps.forEach((PackageDep dep) {
         var oldDep = pubspec.addDependency(dep, dev: dev);
         if(oldDep != null) movedDependencies[dep.name] = oldDep;
       });
-      
+
       pubspec.save();
-      
+
       var otherDepGroupKey = dev ? 'dependencies' : 'dev_dependencies';
       var lines = [];
       deps.forEach((PackageDep dep) {
@@ -88,15 +88,15 @@ class Den {
       });
       print(block('Installed these ${dev ? 'dev_' : ''}dependencies', lines));
     });
-    
+
   }
-  
+
   @SubCommand(help: 'Remove dependencies')
   uninstall(
       @Rest(
-          required: true, 
-          valueHelp: 'package name', 
-          allowed: _getImmediateDependencyNames, 
+          required: true,
+          valueHelp: 'package name',
+          allowed: _getImmediateDependencyNames,
           help: 'Name of dependency to remove')
       List<String> names) {
     var pubspec = Pubspec.load();
@@ -107,7 +107,7 @@ class Den {
     });
 
     pubspec.save();
-    
+
     if(removedDeps.isNotEmpty) {
       var buffer = new StringBuffer();
       var lines = [];
@@ -124,8 +124,8 @@ class Den {
   @SubCommand(help: 'Show any outdated dependencies')
   fetch(
       @Rest(
-          valueHelp: 'package name', 
-          allowed: _getHostedDependencyNames, 
+          valueHelp: 'package name',
+          allowed: _getHostedDependencyNames,
           help: 'Name of dependency to fetch.  If omitted, then fetches all dependencies in the pubspec.')
       Iterable<String> names) {
     var pubspec = Pubspec.load();
@@ -137,7 +137,7 @@ class Den {
         print('\nDependencies are up to date.');
         return;
       }
-      
+
       var lines = [];
       outdated.forEach((name, status) {
         lines.add('${theme.dependency(name)}${theme.info(' (constraint: ')}${theme.version(status.constraint.toString())}${theme.info(', latest: ')}${theme.version(status.primary.toString())}${theme.info(')')}');
@@ -149,8 +149,8 @@ class Den {
   @SubCommand(help: 'Update any outdated dependencies')
   pull(
       @Rest(
-          valueHelp: 'package name', 
-          allowed: _getHostedDependencyNames, 
+          valueHelp: 'package name',
+          allowed: _getHostedDependencyNames,
           help: 'Name of dependency to pull.  If omitted, then pulls all dependencies in the pubspec.')
       Iterable<String> names) {
     var pubspec = Pubspec.load();
@@ -162,20 +162,20 @@ class Den {
         print('\nDependencies were already up to date.');
         return;
       }
-      
+
       var lines = [];
       outdated.forEach((name, status) {
         var updatedConstraint = status.getUpdatedConstraint();
         pubspec.addDependency(new PackageDep(name, 'hosted', updatedConstraint, null), dev: status.dev);
         lines.add('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
       });
-      
+
       pubspec.save();
-      
+
       print(block('Updated dependencies', lines));
     });
   }
-  
+
   Future<Map<String, VersionStatus>> _fetch(Pubspec pubspec, Iterable<String> names, onInvalid(Iterable<String> invalid)) => new Future(() {
     if(names.isEmpty) {
       names = pubspec.versionConstraints.keys;
@@ -189,7 +189,7 @@ class Den {
         return {};
       }
     }
-    
+
     return reduceAsync(names, {}, (outdated, name) {
       return VersionStatus.fetch(pubspec, name).then((VersionStatus status) {
         if(status.isOutdated) outdated[name] = status;
@@ -201,7 +201,7 @@ class Den {
 
 class _SplitPackage {
   final String input, explicitName, body, hash;
-  
+
   static var packagePattern = new RegExp(r'^(([a-zA-Z0-9_]+)=)?([^#]+)(#([^#]+))?');
 
   static _SplitPackage parse(String package) {
@@ -209,9 +209,9 @@ class _SplitPackage {
     if(match == null) throw new FormatException('Invalid package argument', package);
     return new _SplitPackage(match.input, match.group(2), match.group(3), match.group(5));
   }
-  
+
   _SplitPackage(this.input, this.explicitName, this.body, this.hash);
-  
+
   Future<PackageDep> getPackageDep(String source) => new Future(() {
     if(source == 'hosted') {
       // <name>#<version constraint>.
@@ -224,7 +224,7 @@ class _SplitPackage {
         return new PackageDep(name, source, constraint, null);
       });
     };
-    
+
     if(source == 'path') {
       // <name>=<path>.
       if(!nullOrEmpty(hash)) throw new FormatException('Cannot specify hash fragment for path dependency', input);
@@ -254,7 +254,7 @@ class _SplitPackage {
         name = p.basenameWithoutExtension(Uri.parse(gitUri).pathSegments.last);
       }
       var description = ref == null ?
-          gitUri : 
+          gitUri :
           {
             'url': gitUri,
             'ref': ref

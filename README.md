@@ -1,7 +1,11 @@
 den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.org/packages/den) [![Build Status](https://drone.io/github.com/seaneagan/den/status.png)](https://drone.io/github.com/seaneagan/den/latest)
 ===
 
-Den provides a homier experience for many common pub traditions including adding, removing, and updating pubspec dependencies.
+*A pubspec authoring tool.*
+
+Den is a CLI with commands manipulating pubspecs.  It allows you to manipulate 
+your pubspec dependencies via `install`, `uninstall`, `fetch`, and `pull` 
+commands.
 
 ##Install
 
