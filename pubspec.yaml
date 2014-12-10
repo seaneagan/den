@@ -3,6 +3,8 @@ version: 0.1.1
 author: Sean Eagan <seaneagan1@gmail.com>
 description: A pubspec authoring tool.
 homepage: https://github.com/seaneagan/den
+environment:
+  sdk: '>=1.6.0 <2.0.0'
 dependencies:
   ansicolor: any
   contrast: '>=0.1.1 <0.2.0'

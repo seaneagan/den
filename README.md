@@ -27,7 +27,7 @@ den install <your package name>
 ###End Users
 
 ```shell
-# Note: `den ...` requires Dart 1.7 or greater, on Dart 1.6 use `pub global run den ...`
+# `den ...` requires Dart >=1.7, on 1.6 use `pub global run den ...`
 
 # Install dependencies (defaults to '>={latest stable} <{next breaking}')
 den install polymer browser
@@ -60,6 +60,19 @@ den uninstall j[TAB] -> junk
 den fetch p[TAB] -> polymer
 den pull p[TAB] -> polymer
 ```
+
+##^ Constraints
+
+`den install` and `den pull` will take advantage of [^ constraints][caret_info] 
+e.g. `^1.2.3` if either of:
+
+* Your [sdk constraint][sdk_constraint] disallows pre-1.8.0 SDKs when ^ was introduced.
+* You pass the `--caret` flag, which updates your sdk constraint for you.
+
+Otherwise, they will use range syntax e.g. `>=1.2.3 <2.0.0` 
+
+[caret_info]: https://groups.google.com/a/dartlang.org/forum/#!topic/misc/0t9qQF-rZg4
+[sdk_constraint]: https://www.dartlang.org/tools/pub/pubspec.html#sdk-constraints
 
 ##Inspiration
 
