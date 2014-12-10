@@ -27,7 +27,7 @@ den install <your package name>
 ###End Users
 
 ```shell
-# Note: `den ...` requires Dart 1.7, on Dart 1.6 use `pub global run den ...`
+# Note: `den ...` requires Dart 1.7 or greater, on Dart 1.6 use `pub global run den ...`
 
 # Install dependencies (defaults to '>={latest stable} <{next breaking}')
 den install polymer browser

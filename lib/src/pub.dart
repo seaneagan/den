@@ -13,7 +13,7 @@ import 'package:yaml/yaml.dart';
 import 'yaml_edit.dart';
 
 class Pubspec {
-  
+
   String get contents => _contents;
   set contents(String contents) {
     _contents = contents;
@@ -30,19 +30,34 @@ class Pubspec {
   String get homepage => _yamlMap['homepage'];
   String get documentation => _yamlMap['documentation'];
   String get description => _yamlMap['description'];
-  Map<String, dynamic> get dependencies => 
-      _yamlMap.containsKey('dependencies') ? 
+  VersionConstraint get sdkConstraint {
+    var env = _yamlMap['environment'];
+    if (env == null) return VersionConstraint.any;
+    var sdkString = env['sdk'];
+    if (sdkString == null) return VersionConstraint.any;
+    return new VersionConstraint.parse(sdkString);
+  }
+  set sdkConstraint(VersionConstraint version) {
+    var env = _yamlMap['environment'];
+    if(env == null) {
+      contents = setMapKey(_contents, _yamlMap, 'environment', "sdk: '$version'", true);
+    } else {
+      contents = setMapKey(_contents, env, 'sdk', "'$version'", false);
+    }
+  }
+  Map<String, dynamic> get dependencies =>
+      _yamlMap.containsKey('dependencies') ?
           _yamlMap['dependencies'] : const {};
-  Map<String, dynamic> get devDependencies => 
-      _yamlMap.containsKey('dev_dependencies') ? 
+  Map<String, dynamic> get devDependencies =>
+      _yamlMap.containsKey('dev_dependencies') ?
           _yamlMap['dev_dependencies'] : const {};
-  Map<String, dynamic> get dependencyOverrides => 
-      _yamlMap.containsKey('dependency_overrides') ? 
+  Map<String, dynamic> get dependencyOverrides =>
+      _yamlMap.containsKey('dependency_overrides') ?
           _yamlMap['dependency_overrides'] : const {};
   List<String> get immediateDependencyNames => []
       ..addAll(dependencies.keys)
       ..addAll(devDependencies.keys);
-  
+
   Map<String, VersionConstraint> get versionConstraints {
     if (_versionConstraints == null) {
       _versionConstraints = {};
@@ -66,9 +81,9 @@ class Pubspec {
 
   Pubspec(
       this._path,
-      this._contents, 
+      this._contents,
       this._yamlMap);
-  
+
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
     var pubspecPath = p.join(packageRoot, _PUBSPEC);
@@ -79,7 +94,7 @@ class Pubspec {
         contents,
         yaml);
   }
-  
+
   undepend(String packageName) {
     removeFromGroup(bool dev) {
       var old;
@@ -100,19 +115,22 @@ class Pubspec {
     if(old == null) old = removeFromGroup(true);
     return old;
   }
-  
+
   addDependency(PackageDep dep, {bool dev: false}) {
-    
+
     var otherDepGroup = dev ? dependencies : devDependencies;
     var old;
     if(otherDepGroup.containsKey(dep.name)) {
       old = undepend(dep.name);
     }
 
+    bool addingCaret = false;
+
     // TODO: Log whether we're replacing an existing dependency or adding a new one, and all dependency metadata.
     String depSourceDescription;
     if(dep.source == 'hosted') {
       depSourceDescription = "'${dep.constraint}'";
+      if (dep.constraint.toString().startsWith('^')) addingCaret = true;
       if(dep.description is Map) {
         // TODO: Implement for hosted dep map descriptions as well.
         throw new UnimplementedError('Description maps are not yet implemented for adding deps from source "${dep.source}".');
@@ -131,7 +149,11 @@ class Pubspec {
       }
       depSourceDescription = "${dep.source}:$description";
     }
-    
+
+    if (addingCaret) {
+      _ensureSdkConstraintAllowsCaret();
+    }
+
     var location = dev ? 'dev_dependencies' : 'dependencies';
     var containerValue = _yamlMap[location];
     if(containerValue == null) {
@@ -142,14 +164,39 @@ class Pubspec {
     }
     return old;
   }
-  
+
+  /// Adds/updates [sdkConstraint] as necessary to support carets,
+  /// and returns whether or not it was necessary.
+  bool _ensureSdkConstraintAllowsCaret() {
+    /// Whether the SDK constraint guarantees that `^` version constraints are
+    /// safe.
+    bool caretAllowed = sdkConstraint.intersect(_preCaretPubVersions).isEmpty;
+    if (caretAllowed) return false;
+
+    var newSdkConstraint = sdkConstraint.intersect(_postCaretPubVersions);
+    if (newSdkConstraint.isEmpty) newSdkConstraint = _postCaretPubVersions;
+    sdkConstraint = newSdkConstraint;
+    return true;
+  }
+
+  /// Whether [sdkConstraint] guarantees that `^` version constraints are
+  /// safe.
+  bool get caretAllowed => sdkConstraint.intersect(_preCaretPubVersions).isEmpty;
+
+  /// The range of all pub versions that don't support `^` version constraints.
+  final _preCaretPubVersions = new VersionConstraint.parse("<1.8.0-dev.3.0");
+
+  /// The range of all pub versions that do support `^` version constraints.
+  final _postCaretPubVersions = new VersionConstraint.parse("^1.8.0");
+
+
   void save() {
     new File(path).writeAsStringSync(contents);
   }
-  
+
   /// The [basename] of a pubpsec file.
   static final String _PUBSPEC = "pubspec.yaml";
-  
+
   /// Calculate the root of the package containing path.
   static String _getPackageRoot(String subPath) {
     subPath = p.absolute(subPath);
@@ -180,31 +227,31 @@ class Pubspec {
 /// those three types.
 class _PackageName {
   _PackageName(this.name, this.source, this.description);
-  
+
   /// The name of the package being identified.
   final String name;
-  
+
   /// The name of the [Source] used to look up this package given its
   /// [description].
   ///
   /// If this is a root package, this will be `null`.
   final String source;
-  
+
   /// The metadata used by the package's [source] to identify and locate it.
   ///
   /// It contains whatever [Source]-specific data it needs to be able to get
   /// the package. For example, the description of a git sourced package might
   /// by the URL "git://github.com/dart/uilib.git".
   final description;
-  
+
   /// Whether this package is the root package.
   bool get isRoot => source == null;
-  
+
   String toString() {
     if (isRoot) return "$name (root)";
     return "$name from $source";
   }
-  
+
   /// Returns a [PackageDep] for this package with the given version constraint.
   PackageDep withConstraint(VersionConstraint constraint) =>
     new PackageDep(name, source, constraint, description);
@@ -214,17 +261,17 @@ class _PackageName {
 class PackageDep extends _PackageName {
   /// The allowed package versions.
   final VersionConstraint constraint;
-  
+
   PackageDep(String name, String source, this.constraint, description)
       : super(name, source, description);
-  
+
   String toString() {
     if (isRoot) return "$name $constraint (root)";
     return "$name $constraint from $source ($description)";
   }
-  
+
   int get hashCode => name.hashCode ^ source.hashCode;
-  
+
   bool operator ==(other) {
     // TODO(rnystrom): We're assuming here that we don't need to delve into the
     // description.
@@ -236,30 +283,40 @@ class PackageDep extends _PackageName {
 }
 
 class VersionStatus {
-  
+
   final VersionConstraint constraint;
   final bool dev;
   final List<Version> _versions;
   Version get primary => Version.primary(_versions);
   Version get latest => maxOf(_versions);
   bool get isOutdated => !constraint.allows(primary);
-  
-  VersionConstraint getUpdatedConstraint({bool unstable: false, bool keepMin: false}) {
+
+  VersionConstraint getUpdatedConstraint({bool unstable: false, bool keepMin: false, bool caret}) {
     var updateTo = unstable ? latest : primary;
     if(constraint.allows(updateTo)) return constraint;
-    var min = keepMin ? 
-        (constraint is VersionRange ? 
-            (constraint as VersionRange).min :
-            constraint) :
-        updateTo;
-    var includeMin = constraint is VersionRange ?
-        (constraint as VersionRange).includeMin :
-        true;
-    return new VersionRange(min: min, max: getNextBreakingVersion(updateTo), includeMin: includeMin);
+
+    var currentMin = (constraint is VersionRange ?
+        (constraint as VersionRange).min :
+        constraint);
+
+    var min = keepMin ? currentMin : updateTo;
+
+    var includeMin = !keepMin || constraint is! VersionRange ||
+        (constraint as VersionRange).includeMin;
+
+    // Cannot use caret constraint when `keepMin == true` and either of:
+    //
+    // * The updated version is not compatible with current min.
+    // * The current min is not included.
+    if (caret && ((keepMin && currentMin.nextBreaking < updateTo) || !includeMin)) {
+      return new VersionConstraint.compatibleWith(min);
+    }
+
+    return new VersionRange(min: min, max: updateTo.nextBreaking, includeMin: includeMin);
   }
-  
+
   VersionStatus._(this._versions, this.constraint, this.dev);
-  
+
   static Future<VersionStatus> fetch(Pubspec pubspec, String packageName) {
     var constraint = pubspec.versionConstraints[packageName];
     var dev = pubspec.devDependencies.containsKey(packageName);
@@ -269,11 +326,8 @@ class VersionStatus {
   }
 }
 
-Version getNextBreakingVersion(Version version) => 
-    version.major >= 1 ? version.nextMajor : version.nextMinor;
-
-VersionRange getCompatibleVersionRange(Version version) => 
-    new VersionRange(min: version, max: getNextBreakingVersion(version), includeMin: true);
+VersionRange getCompatibleVersionRange(Version version) =>
+    new VersionRange(min: version, max: version.nextBreaking, includeMin: true);
 
 Future<Version> fetchPrimaryVersion(String packageName) {
   return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {

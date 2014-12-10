@@ -54,17 +54,19 @@ class Den {
       @Option(abbr: 's', allowed: const ['hosted', 'git', 'path'], help: 'The source of the package(s).')
       String source: 'hosted',
       @Flag(help: 'Whether this is a dev dependency.')
-      bool dev: false
+      bool dev: false,
+      @Flag(negatable: true)
+      bool caret
   }) {
-
+    // TODO: Validate existing pubspec, and fail if necessary.
+    //       See dartbug.com/21169
+    var pubspec = Pubspec.load();
+    caret = _defaultCaret(caret, pubspec);
     new Future(() {
       return Future.wait(packages
           .map(_SplitPackage.parse)
-          .map((splitPackage) => splitPackage.getPackageDep(source)));
+          .map((splitPackage) => splitPackage.getPackageDep(source, caret: caret)));
     }).then((deps) {
-      // TODO: Validate existing pubspec, and fail if necessary.
-      //       See dartbug.com/21169
-      var pubspec = Pubspec.load();
       var movedDependencies = {};
 
       deps.forEach((PackageDep dep) {
@@ -108,7 +110,7 @@ class Den {
 
     pubspec.save();
 
-    if(removedDeps.isNotEmpty) {
+    if (removedDeps.isNotEmpty) {
       var buffer = new StringBuffer();
       var lines = [];
       removedDeps.forEach((name, old) {
@@ -152,8 +154,13 @@ class Den {
           valueHelp: 'package name',
           allowed: _getHostedDependencyNames,
           help: 'Name of dependency to pull.  If omitted, then pulls all dependencies in the pubspec.')
-      Iterable<String> names) {
+      Iterable<String> names,
+      {
+      @Flag(negatable: true)
+      bool caret
+    }) {
     var pubspec = Pubspec.load();
+    caret = _defaultCaret(caret, pubspec);
     onInvalid(Iterable<String> invalid) {
       print('Can only pull existing hosted dependencies, which do not include: $invalid');
     }
@@ -165,7 +172,7 @@ class Den {
 
       var lines = [];
       outdated.forEach((name, status) {
-        var updatedConstraint = status.getUpdatedConstraint();
+        var updatedConstraint = status.getUpdatedConstraint(caret: caret);
         pubspec.addDependency(new PackageDep(name, 'hosted', updatedConstraint, null), dev: status.dev);
         lines.add('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
       });
@@ -212,14 +219,16 @@ class _SplitPackage {
 
   _SplitPackage(this.input, this.explicitName, this.body, this.hash);
 
-  Future<PackageDep> getPackageDep(String source) => new Future(() {
+  Future<PackageDep> getPackageDep(String source, {bool caret}) => new Future(() {
     if(source == 'hosted') {
       // <name>#<version constraint>.
       if(!nullOrEmpty(explicitName)) throw new FormatException('Cannot specify explicit name for hosted dependency', input);
       var name = body;
       return new Future(() {
         if(hash != null) return new VersionConstraint.parse(hash);
-        return fetchPrimaryVersion(name).then(getCompatibleVersionRange);
+        return fetchPrimaryVersion(name).then((version) => caret ?
+            new VersionConstraint.compatibleWith(version) :
+            getCompatibleVersionRange(version));
       }).then((VersionConstraint constraint) {
         return new PackageDep(name, source, constraint, null);
       });
@@ -266,3 +275,8 @@ class _SplitPackage {
 
 List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;
 List<String> _getHostedDependencyNames() => Pubspec.load().versionConstraints.keys.toList();
+
+bool _defaultCaret(bool caret, Pubspec pubspec) {
+  if (caret != null) return caret;
+  return pubspec.caretAllowed;
+}
