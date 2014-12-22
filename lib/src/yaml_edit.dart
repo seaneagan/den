@@ -11,8 +11,7 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
   if(!mapNode.containsKey(key)) return yaml;
   YamlNode previousValueNode, keyNode, nextKeyNode;
   var orderedKeys = mapNode.nodes.keys.toList()..sort((a, b) => a.span.compareTo(b.span));
-  print('orderedKeys: $orderedKeys');
-  
+
   var keyNodeIterator = orderedKeys.iterator;
   while(keyNodeIterator.moveNext()) {
     var curr = keyNodeIterator.current;
@@ -25,24 +24,24 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
     }
     previousValueNode = mapNode.nodes[curr];
   }
-  
+
   var isFlow = isFlowMapping(yaml, mapNode);
   // TODO: Support flow mappings.  (See also http://dartbug.com/21328 is fixed.)
   if(isFlow) throw new UnimplementedError('Editing flow mappings is not yet supported.');
-  
+
   getEndIndex(YamlNode valueNode, YamlNode nextKeyNode) {
     var valueEndIndex = valueNode.span.end.offset;
     if(isFlow) {
       // Consume trailing comma if there is one.
-      return nextKeyNode == null ? 
-          mapNode.span.end.offset : 
+      return nextKeyNode == null ?
+          mapNode.span.end.offset :
           nextKeyNode.span.start.offset;
     }
     // Consume trailing newline and any trailing comment.
     var endIndex = yaml.indexOf('\n', valueEndIndex - 1) + 1;
     return endIndex == -1 ? yaml.length : endIndex;
   }
-  
+
   var valueNode = mapNode.nodes[key];
   var removePreviousSeparator = nextKeyNode == null;
   var startIndex = removePreviousSeparator ?
@@ -50,10 +49,10 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
       keyNode.span.start.offset;
   var endIndex = getEndIndex(valueNode, nextKeyNode);
   var removed = yaml.substring(startIndex, endIndex);
-  
+
 //  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
 //  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
-    
+
   return yaml.substring(0, startIndex) + yaml.substring(endIndex);
 }
 
@@ -74,8 +73,8 @@ String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) 
       var keyEnd = keyNode.span.end;
       var valueOffset = yaml.indexOf(':', keyEnd.offset) + 1;
       startLocation = new SourceLocation(
-          valueOffset, 
-          sourceUrl: keyNode.span.sourceUrl, 
+          valueOffset,
+          sourceUrl: keyNode.span.sourceUrl,
           line: keyEnd.line,
           column: keyEnd.column + (valueOffset - keyEnd.offset));
     } else { // ownLine && !currentOwnLine
