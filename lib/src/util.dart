@@ -41,3 +41,8 @@ bool defaultCaret(bool caret, Pubspec pubspec) {
 }
 
 List<String> getHostedDependencyNames() => Pubspec.load().versionConstraints.keys.toList();
+
+String enumName(enumValue) {
+  var s = enumValue.toString();
+  return s.substring(s.indexOf('.') + 1);
+}

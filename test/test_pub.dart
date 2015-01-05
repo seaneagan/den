@@ -1,4 +1,6 @@
 
+library den.test.pub;
+
 import 'package:den/src/pub.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
@@ -11,13 +13,13 @@ main() {
       var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
       expect(pubspec.name, 'foo');
       expect(pubspec.author, 'Jane Doe');
-      expect(pubspec.version, '1.2.3');
+      expect(pubspec.version, new Version.parse('1.2.3'));
       expect(pubspec.dependencies, {
         'bar': 'any',
         'baz': '>=1.0.0 <2.0.0'
       });
     });
-    
+
     group('addDependency', () {
 
       test('should add a hosted dependency', () {
@@ -61,7 +63,7 @@ dependencies:
 ''');
     });
   });
-  
+
   test('should add a path dependency', () {
     var path = p.join('foo', 'bar', 'baz');
     testAddDependency(
@@ -115,7 +117,7 @@ dev_dependencies:
   unittest: any
 ''');
   });
-    
+
   test('should add a dev dependency when dev is true', () {
     var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
     pubspec.addDependency(new PackageDep('abc', 'hosted', new VersionConstraint.parse('1.0.0'), null), dev: true);
@@ -129,9 +131,9 @@ dev_dependencies:
   abc: '1.0.0'
 ''');
   });
-  
+
   group('undepend', () {
-    
+
     test('should remove a dependency', () {
       var pubspec = new Pubspec(null, pubspecContents, loadYamlNode(pubspecContents));
       pubspec.undepend('baz');
@@ -154,7 +156,7 @@ dependencies: {
 dev_dependencies:
   unittest: any
 ''';
-      var pubspec = new Pubspec(null, flowMapping, loadYamlNode(pubspecContents));
+      var pubspec = new Pubspec(null, flowMapping, loadYamlNode(flowMapping));
       expect(() => pubspec.undepend('bar'), throwsUnimplementedError);
 //      expect(pubspec.contents, '''
 //$preamble

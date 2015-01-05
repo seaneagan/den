@@ -25,7 +25,7 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
     previousValueNode = mapNode.nodes[curr];
   }
 
-  var isFlow = isFlowMapping(yaml, mapNode);
+  var isFlow = mapNode.style == CollectionStyle.FLOW;
   // TODO: Support flow mappings.  (See also http://dartbug.com/21328 is fixed.)
   if(isFlow) throw new UnimplementedError('Editing flow mappings is not yet supported.');
 
@@ -58,8 +58,8 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
 
 String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) {
   var startLocation, endLocation, insertion;
-  var isFlow = isFlowMapping(yaml, mapNode);
   // TODO: Support flow mappings.
+  var isFlow = mapNode.style == CollectionStyle.FLOW;
   if(isFlow) throw new UnimplementedError('Editing flow mappings is not yet supported.');
   if(mapNode.containsKey(key)) {
     var valueNode = mapNode.nodes[key];
@@ -103,8 +103,4 @@ String replaceSpan(String wholeText, String newText, SourceLocation start, Sourc
       ..write(newText)
       ..write(wholeText.substring(end.offset)))
       .toString();
-}
-
-bool isFlowMapping(String yaml, YamlMap map) {
-  return yaml[map.span.start.offset] == '{';
 }

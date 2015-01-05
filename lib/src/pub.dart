@@ -26,7 +26,10 @@ class Pubspec {
   final String _path;
   String get name => _yamlMap['name'];
   String get author => _yamlMap['author'];
-  String get version => _yamlMap['version'];
+  Version get version => new Version.parse(_yamlMap['version']);
+  set version(Version v) {
+    contents = setMapKey(_contents, _yamlMap, 'version', v.toString(), false);
+  }
   String get homepage => _yamlMap['homepage'];
   String get documentation => _yamlMap['documentation'];
   String get description => _yamlMap['description'];

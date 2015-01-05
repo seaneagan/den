@@ -3,12 +3,13 @@ library den;
 
 import 'package:unscripted/unscripted.dart';
 
+import 'commands/bump.dart';
 import 'commands/fetch.dart';
 import 'commands/install.dart';
 import 'commands/pull.dart';
 import 'commands/uninstall.dart';
 
-class Den extends Object with InstallCommand, UninstallCommand, FetchCommand, PullCommand {
+class Den extends Object with BumpCommand, FetchCommand, InstallCommand, PullCommand , UninstallCommand {
 
   @Command(
       allowTrailingOptions: true,
