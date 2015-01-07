@@ -3,40 +3,42 @@ library den.src.bump;
 
 import 'package:pub_semver/pub_semver.dart';
 
-Version bumpVersion(Version version, {VersionPart part, pre: false}) {
-  if (part == VersionPart.preRelease && !version.isPreRelease) {
-    throw new ArgumentError('Cannot increment the pre-release of a non-pre-release version.');
+Version bumpVersion(Version version, ReleaseType releaseType, {pre: false}) {
+  if (releaseType == ReleaseType.release && !version.isPreRelease) {
+    throw new ArgumentError('Cannot ' +
+        (pre ? 'increment the pre-release of' : 'release') +
+        ' a non-pre-release version.');
   }
 
-  if (VersionPart.build == part && false != pre) {
-    throw new ArgumentError('Cannot create a pre-release of a pre-release or build version.');
+  if (ReleaseType.build == releaseType && false != pre) {
+    throw new ArgumentError('Cannot pre-release of a build release.');
   }
 
   Version newRelease;
-  List newPreRelease = true == pre || pre is String ? createPreRelease(pre) : null;
+  List newPreRelease = false == pre ? null : createPreRelease(pre);
 
-  if (part == null) part = version.isPreRelease ? VersionPart.preRelease : VersionPart.patch;
-
-  switch (part) {
-    case VersionPart.major: newRelease = version.nextMajor; break;
-    case VersionPart.minor: newRelease = version.nextMinor; break;
-    case VersionPart.patch: newRelease = version.nextPatch; break;
-    case VersionPart.preRelease:
+  switch (releaseType) {
+    case ReleaseType.major: newRelease = version.nextMajor; break;
+    case ReleaseType.minor: newRelease = version.nextMinor; break;
+    case ReleaseType.patch: newRelease = version.nextPatch; break;
+    case ReleaseType.release:
       newRelease = version;
       newPreRelease = updatePreRelease(version.preRelease, pre);
       break;
-    case VersionPart.build: return withBuild(version, updateBuild(version.build));
+    case ReleaseType.build: return withBuild(version, updateBuild(version.build));
   }
 
   return withPreRelease(newRelease, newPreRelease);
 }
 
 Version withPreRelease(Version version, List preRelease) =>
-    new Version(version.major, version.minor, version.patch, pre: preRelease == null ? null : preRelease.join('.'));
+    new Version(version.major, version.minor, version.patch,
+        pre: preRelease == null ? null : preRelease.join('.'));
 
-List createPreRelease(pre) => pre is! String ? [0] : _preReleaseWithId(pre, 0);
+List createPreRelease(pre) => pre is String ? _preReleaseWithId(pre, 0) : [0];
 
 List updatePreRelease(List preRelease, pre) {
+  if (false == pre) return [];
   switch (preRelease.length) {
     case 0: break;
     case 1:
@@ -68,8 +70,9 @@ List updatePreRelease(List preRelease, pre) {
 _preReleaseWithId(String id, int index) => [id, index];
 
 withBuild(Version v, List build) =>
-    new Version(v.major, v.minor, v.patch, pre: v.preRelease.isEmpty ? null : v.preRelease.join('.'),
-    build: build.isEmpty ? null : build.join('.'));
+    new Version(v.major, v.minor, v.patch,
+        pre: v.preRelease.isEmpty ? null : v.preRelease.join('.'),
+        build: build.isEmpty ? null : build.join('.'));
 
 List updateBuild(List build) {
   if (build.isEmpty) return [1];
@@ -77,18 +80,19 @@ List updateBuild(List build) {
   throw 'Cannot increment unrecognized build "${build.join('.')}';
 }
 
-class VersionPart {
+class ReleaseType {
   final String _name;
 
-  const VersionPart._(this._name);
+  const ReleaseType._(this._name);
 
-  static const VersionPart major = const VersionPart._('major');
-  static const VersionPart minor = const VersionPart._('minor');
-  static const VersionPart patch = const VersionPart._('patch');
-  static const VersionPart preRelease = const VersionPart._('preRelease');
-  static const VersionPart build = const VersionPart._('build');
+  static const ReleaseType major = const ReleaseType._('major');
+  static const ReleaseType minor = const ReleaseType._('minor');
+  static const ReleaseType patch = const ReleaseType._('patch');
+  static const ReleaseType breaking = const ReleaseType._('breaking');
+  static const ReleaseType release = const ReleaseType._('release');
+  static const ReleaseType build = const ReleaseType._('build');
 
-  static List<VersionPart> values = [major, minor, patch, preRelease, build];
+  static List<ReleaseType> values = [major, minor, patch, breaking, release, build];
 
-  String toString() => 'VersionPart.$_name';
+  String toString() => 'ReleaseType.$_name';
 }
