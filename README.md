@@ -3,9 +3,8 @@ den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.o
 
 *A pubspec authoring tool.*
 
-Den is a CLI with commands manipulating pubspecs.  It allows you to manipulate 
-your pubspec dependencies via `install`, `uninstall`, `fetch`, and `pull` 
-commands.
+Den provides the following CLI commands to manipulate and analyze your pubspec:
+`bump`, `install`, `uninstall`, `fetch`, and `pull`.
 
 ##Install
 
@@ -28,6 +27,12 @@ den install <your package name>
 
 ```shell
 # `den ...` requires Dart >=1.7, on 1.6 use `pub global run den ...`
+
+# Bump your pubspec version (and do a tagged version commit if in a git repo)
+den bump 1.2.3
+den bump patch
+den bump major --pre-id beta
+den bump release --pre
 
 # Install dependencies (defaults to '>={latest stable} <{next breaking}')
 den install polymer browser
