@@ -1,8 +1,8 @@
 
 library den.test;
 
-import 'test_bump.dart' as bump;
-import 'test_pub.dart' as pub;
+import 'bump_test.dart' as bump;
+import 'pub_test.dart' as pub;
 
 main() {
   bump.main();
