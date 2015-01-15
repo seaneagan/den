@@ -21,6 +21,7 @@ Version bumpVersion(Version version, ReleaseType releaseType, {pre: false}) {
     case ReleaseType.major: newRelease = version.nextMajor; break;
     case ReleaseType.minor: newRelease = version.nextMinor; break;
     case ReleaseType.patch: newRelease = version.nextPatch; break;
+    case ReleaseType.breaking: newRelease = version.major == 0 ? version.nextMinor : version.nextMajor; break;
     case ReleaseType.release:
       newRelease = version;
       newPreRelease = updatePreRelease(version.preRelease, pre);
@@ -35,7 +36,7 @@ Version withPreRelease(Version version, List preRelease) =>
     new Version(version.major, version.minor, version.patch,
         pre: preRelease == null ? null : preRelease.join('.'));
 
-List createPreRelease(pre) => pre is String ? _preReleaseWithId(pre, 0) : [0];
+List createPreRelease(pre) => false == pre ? null : pre is String ? _preReleaseWithId(pre, 0) : [0];
 
 List updatePreRelease(List preRelease, pre) {
   if (false == pre) return [];

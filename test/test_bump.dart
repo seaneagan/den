@@ -19,6 +19,11 @@ main() {
       testBump('1.2.3', ReleaseType.patch, false, '1.2.4');
     });
 
+    test('bumps breaking', () {
+      testBump('0.7.2', ReleaseType.breaking, false, '0.8.0');
+      testBump('1.2.3', ReleaseType.breaking, false, '2.0.0');
+    });
+
     test('bumps pre-release', () {
       testBump('1.2.3-0', ReleaseType.release, true, '1.2.3-1');
       testBump('1.2.3-pre', ReleaseType.release, true, '1.2.3-pre.0');
