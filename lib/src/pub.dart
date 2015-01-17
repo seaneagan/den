@@ -25,14 +25,34 @@ class Pubspec {
   String get path => _path;
   final String _path;
   String get name => _yamlMap['name'];
+  set name(String _name) {
+    contents = setMapKey(_contents, _yamlMap, 'name', _name, false);
+  }
   String get author => _yamlMap['author'];
+  set author(String _author) {
+    _setValue('author', _author, 'author <email@example.com>');
+  }
   Version get version => new Version.parse(_yamlMap['version']);
   set version(Version v) {
     contents = setMapKey(_contents, _yamlMap, 'version', v.toString(), false);
   }
   String get homepage => _yamlMap['homepage'];
+  set homepage(String _homepage) {
+    _setValue('homepage', _homepage, 'https://www.example.com');
+  }
   String get documentation => _yamlMap['documentation'];
   String get description => _yamlMap['description'];
+  set description(String _description) {
+    _setValue('description', _description, 'Description of dart project.');
+  }
+  void _setValue(String key, String value, String fallback) {
+    if(value!=null && value!='') {
+      contents = setMapKey(_contents, _yamlMap, key, value, false);
+    } else {
+      contents = deleteMapKey(_contents, _yamlMap, key);
+      contents = setMapKey(_contents, _yamlMap, '#$key', fallback, false);
+    }
+  }
   VersionConstraint get sdkConstraint {
     var env = _yamlMap['environment'];
     if (env == null) return VersionConstraint.any;
@@ -87,6 +107,18 @@ class Pubspec {
       this._contents,
       this._yamlMap);
 
+  static Pubspec init() {
+    var packageRoot = p.current;
+    var pubspecPath = p.join(packageRoot, _PUBSPEC);
+    var contents = "name: ${p.basename(packageRoot)}";
+    var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
+    var _pubspec = new Pubspec(pubspecPath, contents, yaml);
+
+    _pubspec
+    ..version = new Version.parse('0.1.0');
+
+    return _pubspec;
+  }
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
     var pubspecPath = p.join(packageRoot, _PUBSPEC);
