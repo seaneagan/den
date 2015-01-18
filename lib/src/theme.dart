@@ -10,6 +10,10 @@ class DenTheme {
   final AnsiPen info = new AnsiPen()..white();
   final AnsiPen warning = new AnsiPen()..yellow();
   final AnsiPen error = new AnsiPen()..red(bold: true);
+  final AnsiPen question = new AnsiPen()..white();
+  final AnsiPen questionDefault = new AnsiPen()..green(bold: true);
+  final AnsiPen field = new AnsiPen()..green(bold: true);
+  final AnsiPen value = new AnsiPen()..blue(bold:true);
 }
 
 final theme = new DenTheme();

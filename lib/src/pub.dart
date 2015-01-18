@@ -11,6 +11,8 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
 
 import 'yaml_edit.dart';
+import 'git.dart';
+
 
 class Pubspec {
 
@@ -30,7 +32,7 @@ class Pubspec {
   }
   String get author => _yamlMap['author'];
   set author(String _author) {
-    _setValue('author', _author, 'author <email@example.com>');
+    _setValue('author', _author);
   }
   Version get version => new Version.parse(_yamlMap['version']);
   set version(Version v) {
@@ -38,19 +40,18 @@ class Pubspec {
   }
   String get homepage => _yamlMap['homepage'];
   set homepage(String _homepage) {
-    _setValue('homepage', _homepage, 'https://www.example.com');
+    _setValue('homepage', _homepage);
   }
   String get documentation => _yamlMap['documentation'];
   String get description => _yamlMap['description'];
   set description(String _description) {
-    _setValue('description', _description, 'Description of dart project.');
+    _setValue('description', _description);
   }
-  void _setValue(String key, String value, String fallback) {
+  void _setValue(String key, String value) {
     if(value!=null && value!='') {
       contents = setMapKey(_contents, _yamlMap, key, value, false);
     } else {
       contents = deleteMapKey(_contents, _yamlMap, key);
-      contents = setMapKey(_contents, _yamlMap, '#$key', fallback, false);
     }
   }
   VersionConstraint get sdkConstraint {
@@ -114,8 +115,9 @@ class Pubspec {
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     var _pubspec = new Pubspec(pubspecPath, contents, yaml);
 
-    _pubspec
-    ..version = new Version.parse('0.1.0');
+    _pubspec.version = new Version.parse('0.1.0');
+
+    if(checkHasGitSync()) _pubspec.author = "${gitConfigUserNameSync()} <${gitConfigUserEmailSync()}>";
 
     return _pubspec;
   }

@@ -7,6 +7,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:which/which.dart';
 
 Future<ProcessResult> runGit(args, {String workingDirectory}) => Process.run('git', args, workingDirectory: workingDirectory);
+ProcessResult runGitSync(args, {String workingDirectory}) => Process.runSync('git', args, workingDirectory: workingDirectory);
 
 const String _versionTemplate = 'v{v}';
 
@@ -58,6 +59,8 @@ ${status.join("\n")}''');
 Future<bool> checkHasGit() =>
     which('git', orElse: () => null).then((git) => git != null);
 
+bool checkHasGitSync() => whichSync('git', orElse: () => null) != null;
+
 Future<List<String>> gitStatus() => runGit(['status', '--porcelain']).then((processResult) {
   var lines = processResult.stdout.trim().split("\n")
       .where((String line) => line.trim().isNotEmpty && !line.startsWith('?? '))
@@ -65,3 +68,5 @@ Future<List<String>> gitStatus() => runGit(['status', '--porcelain']).then((proc
   return lines;
 });
 
+String gitConfigUserNameSync() => runGitSync(['config', 'user.name']).stdout.trim();
+String gitConfigUserEmailSync() => runGitSync(['config', 'user.email']).stdout.trim();
