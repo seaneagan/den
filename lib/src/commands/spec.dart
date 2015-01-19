@@ -54,7 +54,8 @@ class SpecCommand {
       }
     ).whenComplete((){
 
-      var contents = _syntaxHighlighted();
+      // TODO: Make contents syntax highlighted.
+      var contents = _pubspec.contents;
       print("\npubspec.yaml\n============\n$contents\n");
       return ask(new Question.confirm("All correct?", defaultsTo:true))
       .then((bool correct){
@@ -65,28 +66,5 @@ class SpecCommand {
         }
       });
     });
-  }
-
-  String _syntaxHighlighted() {
-    var fieldContents = fields.toSet().intersection(_yamlMap.keys.toSet()).map(
-          (String field) {
-            return "${theme.field(field)}: ${theme.value(_yamlMap[field])}";
-          }
-        ).join("\n");
-
-    var envContents = _yamlMap['environment'] != null ? _block('environment') : '';
-    var depContents = _yamlMap['dependencies'] != null ? _block('dependencies') : '';
-    var devdepContents = _yamlMap['dev_dependencies'] != null ? _block('dev_dependencies') : '';;
-
-    return "$fieldContents$envContents$depContents$devdepContents";
-  }
-
-  String _block(String title) {
-    var lines = _yamlMap[title].keys
-    .map((String key) {
-      var value = "'${_yamlMap[title][key]}'";
-      return "${theme.dependency(key)}: ${theme.value(value)}";
-    }).toList();
-    return "\n${theme.field(title + ':')}\n${lines.map((line) => '  $line').join('\n')}";
   }
 }
