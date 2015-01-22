@@ -1,9 +1,9 @@
-
 library den.src.commands.spec;
 
 import 'dart:async';
 import 'dart:mirrors';
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:path/path.dart' as p;
 import 'package:unscripted/unscripted.dart';
@@ -19,52 +19,50 @@ class SpecCommand {
   Pubspec _pubspec;
   InstanceMirror get _pubspecReflection => reflect(_pubspec);
   YamlMap get _yamlMap => _pubspec.yamlMap;
-  final fields = ['name','version','author','homepage','description'];
+  final fields = ['name', 'author', 'version', 'homepage', 'description'];
 
-  List<Question> get questions =>
-    fields.map((String field){
-      return new Question("$field (${_yamlMap[field]})");
-    });
+  @SubCommand(help: 'Initialize or edit a pubspec file.')
+  spec() {
+    new File('pubspec.yaml')
+    ..exists().then((exists) {
+      (exists ? new Future.value(Pubspec.load()) : Pubspec.init())
+      .then((_pubspec) {
+        this._pubspec = _pubspec;
+        Future.forEach(
+          fields,
+          (String field) {
+            var defaultValue = _yamlMap[field] != null ? _yamlMap[field] : '';
 
-  @SubCommand(help: 'Initiate or edit pubspec.yaml file.')
-  spec(
+            var question = defaultValue != ''
+              ? new Question("${theme.question(field)} (${theme.questionDefault(defaultValue)})", defaultsTo: defaultValue)
+              : new Question(theme.question(field), defaultsTo: '');
 
-  ) {
-    _prompts();
-  }
-
-  Future _prompts() {
-    var pubspecFile = new File('pubspec.yaml');
-    _pubspec = pubspecFile.existsSync() ? Pubspec.load() : Pubspec.init();
-
-    return Future.forEach(
-      fields,
-      (String field){
-        var defaultValue = _yamlMap[field] != null ? _yamlMap[field] : '';
-
-        var question = defaultValue != ''
-          ? new Question("${theme.question(field)} (${theme.questionDefault(defaultValue)}):", defaultsTo: defaultValue)
-          : new Question(theme.question(field), defaultsTo: '');
-
-        return ask(question)
-        .then((String response){
-          if(response=='') _pubspecReflection.setField(new Symbol(field), defaultValue);
-          else _pubspecReflection.setField(new Symbol(field), response);
+            return ask(question).then((String response) {
+              if (response=='') _pubspecReflection.setField(new Symbol(field), defaultValue);
+              else _pubspecReflection.setField(new Symbol(field), response);
+            });
+        }).then((_) {
+          print(_contentValidation());
+          ask(new Question.confirm("All correct")).then((bool correct) {
+            if (correct) {
+              _pubspec.save();
+              close();
+              print("\npubspec.yaml ${theme.warning('saved')}.\n");
+            } else {
+              close();
+              print("\npubspec.yaml ${theme.warning('not')} saved.\n");
+            }
+          });
         });
-      }
-    ).whenComplete((){
-
-      // TODO: Make contents syntax highlighted.
-      var contents = _pubspec.contents;
-      print("\npubspec.yaml\n============\n$contents\n");
-      return ask(new Question.confirm("All correct?", defaultsTo:true))
-      .then((bool correct){
-        if(!correct) return _prompts();
-        else {
-          _pubspec.save();
-          return close();
-        }
       });
     });
   }
+
+// TODO: Make contents syntax highlighted.
+String _contentValidation() => '''
+
+pubspec.yaml
+============
+${_pubspec.contents}''';
+
 }

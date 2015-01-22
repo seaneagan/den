@@ -108,18 +108,40 @@ class Pubspec {
       this._contents,
       this._yamlMap);
 
-  static Pubspec init() {
+  static Future<Pubspec> init() {
+    var completer = new Completer();
     var packageRoot = p.current;
     var pubspecPath = p.join(packageRoot, _PUBSPEC);
-    var contents = "name: ${p.basename(packageRoot)}";
+    var exp = new RegExp(r"(-|\.).*$");
+    var name = p.basename(packageRoot).replaceAll(exp, "");
+    var contents = "name: $name";
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     var _pubspec = new Pubspec(pubspecPath, contents, yaml);
 
     _pubspec.version = new Version.parse('0.1.0');
 
-    if(checkHasGitSync()) _pubspec.author = "${gitConfigUserNameSync()} <${gitConfigUserEmailSync()}>";
+    runZoned(() {
+      checkHasGit()
+      .then((bool hasGit){
+        if(hasGit) {
+          gitConfigUserName().then((String name) => name)
+          .then((String name) => gitConfigUserEmail().then((String email) => "$name <$email>"))
+          .then((String author){
+            _pubspec.author = author;
+            completer.complete(_pubspec);
+          });
+        }
+        else {
+          completer.complete(_pubspec);
+        }
+      });
+    }, onError: (error, stackTrace) {
+      print(error);
+      _pubspec.author = '';
+      completer.complete(_pubspec);
+    });
 
-    return _pubspec;
+    return completer.future;
   }
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
