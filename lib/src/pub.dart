@@ -108,41 +108,35 @@ class Pubspec {
       this._contents,
       this._yamlMap);
 
-  static Future<Pubspec> init() {
-    var completer = new Completer();
+  static Future<Pubspec> init() => new Future(() {
     var packageRoot = p.current;
     var pubspecPath = p.join(packageRoot, _PUBSPEC);
-    var exp = new RegExp(r"(-|\.).*$");
+    var exp = new RegExp(r"(-dart|\.dart)$");
     var name = p.basename(packageRoot).replaceAll(exp, "");
+    name = new RegExp(r'[_a-zA-Z][_a-zA-Z0-9]*').hasMatch(name) ? name : '';
     var contents = "name: $name";
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
-    var _pubspec = new Pubspec(pubspecPath, contents, yaml);
-
-    _pubspec.version = new Version.parse('0.1.0');
-
-    runZoned(() {
-      checkHasGit()
-      .then((bool hasGit){
-        if(hasGit) {
-          gitConfigUserName().then((String name) => name)
-          .then((String name) => gitConfigUserEmail().then((String email) => "$name <$email>"))
-          .then((String author){
-            _pubspec.author = author;
-            completer.complete(_pubspec);
-          });
-        }
-        else {
-          completer.complete(_pubspec);
-        }
-      });
-    }, onError: (error, stackTrace) {
-      print(error);
-      _pubspec.author = '';
-      completer.complete(_pubspec);
+    var pubspec = new Pubspec(pubspecPath, contents, yaml);
+    pubspec.version = Version.none.nextMinor;
+    return checkHasGit()
+    .then((hasGit){
+      if (hasGit) {
+        return gitConfigUserName().then((String name) => name)
+        .then((String name) => gitConfigUserEmail().then((String email) {
+          pubspec.author = "$name <$email>";
+          return pubspec;
+        }))
+        .catchError((error){
+          pubspec.author = '';
+          return pubspec;
+        });
+      } else {
+        pubspec.author = '';
+        return pubspec;
+      }
     });
+  });
 
-    return completer.future;
-  }
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
     var pubspecPath = p.join(packageRoot, _PUBSPEC);
