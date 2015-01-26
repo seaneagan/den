@@ -7,9 +7,10 @@ import 'commands/bump.dart';
 import 'commands/fetch.dart';
 import 'commands/install.dart';
 import 'commands/pull.dart';
+import 'commands/spec.dart';
 import 'commands/uninstall.dart';
 
-class Den extends Object with BumpCommand, FetchCommand, InstallCommand, PullCommand , UninstallCommand {
+class Den extends Object with BumpCommand, FetchCommand, SpecCommand, InstallCommand, PullCommand , UninstallCommand {
 
   @Command(
       allowTrailingOptions: true,

@@ -65,3 +65,5 @@ Future<List<String>> gitStatus() => runGit(['status', '--porcelain']).then((proc
   return lines;
 });
 
+Future<String> gitConfigUserName() => runGit(['config', 'user.name']).then((processResult) => processResult.stdout.trim());
+Future<String> gitConfigUserEmail() => runGit(['config', 'user.email']).then((processResult) => processResult.stdout.trim());

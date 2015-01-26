@@ -11,6 +11,8 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
 
 import 'yaml_edit.dart';
+import 'git.dart';
+
 
 class Pubspec {
 
@@ -25,14 +27,33 @@ class Pubspec {
   String get path => _path;
   final String _path;
   String get name => _yamlMap['name'];
+  set name(String _name) {
+    contents = setMapKey(_contents, _yamlMap, 'name', _name, false);
+  }
   String get author => _yamlMap['author'];
+  set author(String _author) {
+    _setValue('author', _author);
+  }
   Version get version => new Version.parse(_yamlMap['version']);
   set version(Version v) {
     contents = setMapKey(_contents, _yamlMap, 'version', v.toString(), false);
   }
   String get homepage => _yamlMap['homepage'];
+  set homepage(String _homepage) {
+    _setValue('homepage', _homepage);
+  }
   String get documentation => _yamlMap['documentation'];
   String get description => _yamlMap['description'];
+  set description(String _description) {
+    _setValue('description', _description);
+  }
+  void _setValue(String key, String value) {
+    if(value!=null && value!='') {
+      contents = setMapKey(_contents, _yamlMap, key, value, false);
+    } else {
+      contents = deleteMapKey(_contents, _yamlMap, key);
+    }
+  }
   VersionConstraint get sdkConstraint {
     var env = _yamlMap['environment'];
     if (env == null) return VersionConstraint.any;
@@ -86,6 +107,35 @@ class Pubspec {
       this._path,
       this._contents,
       this._yamlMap);
+
+  static Future<Pubspec> init() => new Future(() {
+    var packageRoot = p.current;
+    var pubspecPath = p.join(packageRoot, _PUBSPEC);
+    var exp = new RegExp(r"(-dart|\.dart)$");
+    var name = p.basename(packageRoot).replaceAll(exp, "");
+    name = new RegExp(r'[_a-zA-Z][_a-zA-Z0-9]*').hasMatch(name) ? name : '';
+    var contents = "name: $name";
+    var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
+    var pubspec = new Pubspec(pubspecPath, contents, yaml);
+    pubspec.version = Version.none.nextMinor;
+    return checkHasGit()
+    .then((hasGit){
+      if (hasGit) {
+        return gitConfigUserName().then((String name) => name)
+        .then((String name) => gitConfigUserEmail().then((String email) {
+          pubspec.author = "$name <$email>";
+          return pubspec;
+        }))
+        .catchError((error){
+          pubspec.author = '';
+          return pubspec;
+        });
+      } else {
+        pubspec.author = '';
+        return pubspec;
+      }
+    });
+  });
 
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
