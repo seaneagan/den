@@ -65,5 +65,20 @@ Future<List<String>> gitStatus() => runGit(['status', '--porcelain']).then((proc
   return lines;
 });
 
-Future<String> gitConfigUserName() => runGit(['config', 'user.name']).then((processResult) => processResult.stdout.trim());
-Future<String> gitConfigUserEmail() => runGit(['config', 'user.email']).then((processResult) => processResult.stdout.trim());
+Future<String> gitUserName() => gitConfig('user.name');
+Future<String> gitUserEmail() => gitConfig('user.email');
+Future<String> githubUrl() => gitConfig('remote.origin.url').then(repoUrlToHomepage);
+
+String repoUrlToHomepage(String repo) {
+  var uri = Uri.parse(repo);
+  // TODO: Support other git hosts such as bitbucket.
+  if (uri.origin == 'github.com') {
+    p.Context context = p.Style.url.context;
+    var newPath = context.join(context.dirname(uri.path), context.basenameWithoutExtension(uri.path));
+    return uri.replace(scheme: 'https', path: newPath).toString();
+  }
+  return null;
+}
+
+Future<String> gitConfig(String property) =>
+    runGit(['config', property]).then((processResult) => processResult.stdout.trim());

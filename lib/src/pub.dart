@@ -12,6 +12,7 @@ import 'package:yaml/yaml.dart';
 
 import 'yaml_edit.dart';
 import 'git.dart';
+import 'util.dart';
 
 
 class Pubspec {
@@ -48,7 +49,7 @@ class Pubspec {
     _setValue('description', _description);
   }
   void _setValue(String key, String value) {
-    if(value!=null && value!='') {
+    if(value != null && value != '') {
       contents = setMapKey(_contents, _yamlMap, key, value, false);
     } else {
       contents = deleteMapKey(_contents, _yamlMap, key);
@@ -61,12 +62,25 @@ class Pubspec {
     if (sdkString == null) return VersionConstraint.any;
     return new VersionConstraint.parse(sdkString);
   }
-  set sdkConstraint(VersionConstraint version) {
+  set sdkConstraint(VersionConstraint constraint) {
     var env = _yamlMap['environment'];
+    if (constraint == null) {
+      if (env is Map) {
+        if (env.containsKey('sdk')) {
+          if (env.keys.length == 1) {
+            contents = deleteMapKey(_contents, _yamlMap, 'environment');
+          } else {
+            contents = deleteMapKey(_contents, env, 'sdk');
+          }
+        }
+      }
+      return;
+    }
+    if (constraint.toString().contains('^')) throw 'Sdk constraints cannot use ^';
     if(env == null) {
-      contents = setMapKey(_contents, _yamlMap, 'environment', "sdk: '$version'", true);
+      contents = setMapKey(_contents, _yamlMap, 'environment', "sdk: '$constraint'", true);
     } else {
-      contents = setMapKey(_contents, env, 'sdk', "'$version'", false);
+      contents = setMapKey(_contents, env, 'sdk', "'$constraint'", false);
     }
   }
   Map<String, dynamic> get dependencies =>
@@ -110,36 +124,49 @@ class Pubspec {
 
   static Future<Pubspec> init() => new Future(() {
     var packageRoot = p.current;
-    var pubspecPath = p.join(packageRoot, _PUBSPEC);
+    var pubspecPath = p.join(packageRoot, basename);
     var exp = new RegExp(r"(-dart|\.dart)$");
     var name = p.basename(packageRoot).replaceAll(exp, "");
     name = new RegExp(r'[_a-zA-Z][_a-zA-Z0-9]*').hasMatch(name) ? name : '';
     var contents = "name: $name";
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     var pubspec = new Pubspec(pubspecPath, contents, yaml);
-    pubspec.version = Version.none.nextMinor;
-    return checkHasGit()
-    .then((hasGit){
+    return checkHasGit().then((hasGit) {
+      dummyAuthor() {
+        pubspec.author = '# name <email>';
+      }
       if (hasGit) {
-        return gitConfigUserName().then((String name) => name)
-        .then((String name) => gitConfigUserEmail().then((String email) {
+        return gitUserName().then((name) => gitUserEmail().then((email) {
           pubspec.author = "$name <$email>";
-          return pubspec;
-        }))
-        .catchError((error){
-          pubspec.author = '';
-          return pubspec;
+        })).catchError((_) => dummyAuthor()).then((_) {
+          dummyHomepage() {
+            pubspec.homepage = '# https://github.com/user/repo';
+          }
+          return githubUrl().then((url) {
+            if (url == null) dummyHomepage();
+            pubspec.homepage = url;
+          }).catchError((_) {
+            dummyHomepage();
+          });
         });
       } else {
-        pubspec.author = '';
-        return pubspec;
+        dummyAuthor();
       }
+    }).then((_) {
+      pubspec.version = new Version.parse('0.1.0');
+      var prevMajor = new Version(sdkVersion.major, 0, 0);
+      pubspec.sdkConstraint = new VersionRange(
+          min: prevMajor,
+          includeMin: true,
+          max: sdkVersion.nextMajor,
+          includeMax: false);
+      return pubspec;
     });
   });
 
   static Pubspec load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
-    var pubspecPath = p.join(packageRoot, _PUBSPEC);
+    var pubspecPath = p.join(packageRoot, basename);
     var contents = new File(pubspecPath).readAsStringSync();
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     return new Pubspec(
@@ -248,7 +275,7 @@ class Pubspec {
   }
 
   /// The [basename] of a pubpsec file.
-  static final String _PUBSPEC = "pubspec.yaml";
+  static final String basename = "pubspec.yaml";
 
   /// Calculate the root of the package containing path.
   static String _getPackageRoot(String subPath) {
@@ -260,7 +287,7 @@ class Pubspec {
     for(int i = 0; i < segments.length; i++) {
       var testDir = new Directory(testPath);
       if(testDir.existsSync() && testDir.listSync().any((fse) =>
-          p.basename(fse.path) == _PUBSPEC)) {
+          p.basename(fse.path) == basename)) {
         return testPath;
       }
       testPath = p.dirname(testPath);

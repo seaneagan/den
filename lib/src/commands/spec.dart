@@ -7,73 +7,135 @@ import 'dart:io';
 import 'package:unscripted/unscripted.dart';
 import 'package:prompt/prompt.dart';
 import 'package:pub_semver/pub_semver.dart';
-import 'package:pub_semver/src/patterns.dart' as patterns;
 import 'package:yaml/yaml.dart';
 
+import '../check_package_author.dart';
+import '../check_package_name.dart';
 import '../pub.dart';
 import '../theme.dart';
+import '../util.dart';
 
 class SpecCommand {
-  final fields = ['name', 'author', 'version', 'homepage', 'description'];
-  final validators = {
-    'name': new RegExp(r'[_a-zA-Z][_a-zA-Z0-9]*'),
-    'version': patterns.COMPLETE_VERSION,
-    'homepage': new RegExp(r'^https?:')
-    // TODO: author(s) validation.
-  };
 
   @SubCommand(help: 'Initialize or edit a pubspec file.')
   spec() {
-    new File('pubspec.yaml')
-    ..exists().then((exists) {
-      (exists ? new Future.value(Pubspec.load()) : Pubspec.init())
+    new File(Pubspec.basename).exists().then((exists) =>
+      new Future(() => exists ? Pubspec.load() : Pubspec.init())
       .then((pubspec) {
-        InstanceMirror pubspecReflection = reflect(pubspec);
+        InstanceMirror pubspecMirror = reflect(pubspec);
         YamlMap yamlMap = pubspec.yamlMap;
         Future.forEach(
           fields,
-          (String field) {
-            var defaultValue = yamlMap[field] != null ? yamlMap[field] : '';
-            var parser = (response) {
-              if(response == '') return defaultValue;
-              else {
-                return
-                  (validators.containsKey(field) ? validators[field].hasMatch(response) : true)
-                  ? response
-                  : throw new FormatException("Invalid input requires: ${validators[field].pattern}");
-              }
-            };
-
-            var question = defaultValue != ''
-              ? new Question("${theme.question(field)} (${theme.questionDefault(defaultValue)})", defaultsTo: defaultValue, parser: parser)
-              : new Question(theme.question(field), defaultsTo: defaultValue, parser: parser);
-
-            return ask(question).then((String response) {
-              if (response=='') pubspecReflection.setField(new Symbol(field), defaultValue);
-              else pubspecReflection.setField(new Symbol(field), response);
+          (Symbol field) {
+            var question = getFieldQuestion(pubspec, field);
+            return ask(question).then((answer) {
+              pubspecMirror.setField(field, answer);
             });
-        }).then((_) {
-          print(_contentValidation(pubspec));
-          ask(new Question.confirm("All correct")).then((bool correct) {
-            if (correct) {
-              pubspec.save();
-              close();
-              print("\npubspec.yaml ${theme.warning('saved')}.\n");
-            } else {
-              close();
-              print("\npubspec.yaml ${theme.warning('not')} saved.\n");
-            }
+        })
+        .then((_) => promptSdkConstraint(pubspec))
+        .then((_) {
+          print(contentValidation(pubspec));
+          var action = exists ? 'update' : 'create';
+          return ask(new Question.confirm("$action pubspec as above")).then((bool correct) {
+            if (correct) pubspec.save();
+            var negation = correct ? '' : ' ${theme.warning('not')}';
+            print("\n${Pubspec.basename}$negation ${action}d.\n");
           });
-        });
-      });
-    });
+        }).whenComplete(close);
+      })
+    );
   }
+}
+
+Question getFieldQuestion(Pubspec pubspec, Symbol field) {
+  var parser = parsers[field];
+  var defaultsTo = reflect(pubspec).getField(field).reflectee;
+  var message = getMessageWithDefault(MirrorSystem.getName(field), defaultsTo);
+  return new Question(message, defaultsTo: defaultsTo, parser: parser);
+}
+
+String getMessageWithDefault(String message, defaultsTo) {
+  var themed = theme.question(message);
+  if (defaultsTo != null) themed += " (${theme.questionDefault(defaultsTo.toString())})";
+  return themed;
+}
+
+// TODO: Add sdk constraint.
+final fields = [#name, #author, #version, #homepage, #description];
+final parsers = {
+  #name: (String name) {
+    var errors = checkPackageName(name);
+    if (errors.isEmpty) return name;
+    throw errors.first;
+  },
+  #version: (String version) {
+    try {
+      return new Version.parse(version);
+    } catch (e) {
+      throw 'Version "$version" must be a valid semver version.';
+    }
+  },
+  #homepage: (String homepage) {
+    var uri = Uri.parse(homepage);
+    // TODO: Throw on relative uri's like 'foo'.
+    if (!uri.isAbsolute) throw 'Homepage "$homepage" must be an absolute uri.';
+    if (!new RegExp(r'^https?$').hasMatch(uri.scheme)) throw 'Homepage "$homepage" must be an http(s) uri.';
+    return homepage;
+  },
+  #author: (String author) {
+    var errors = checkAuthor(author);
+    if (errors.isEmpty) return author;
+    throw errors.first;
+  }
+};
 
 // TODO: Make contents syntax highlighted.
-String _contentValidation(Pubspec pubspec) => '''
+String contentValidation(Pubspec pubspec) => '''
 
-pubspec.yaml
-============
-${pubspec.contents}''';
+${indent(pubspec.contents, 2)}''';
 
-}
+Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() {
+  var prevMajor = new Version(sdkVersion.major, 0, 0);
+  var prevMinor = new Version(sdkVersion.major, sdkVersion.minor, 0);
+  var nextMajor = sdkVersion.nextMajor;
+  // Can't use [VersionConstraint.compatibleWith] directly since the [toString] will use `^`.
+  VersionConstraint compatibleWith(Version version) {
+    var comp = new VersionConstraint.compatibleWith(version);
+    return new VersionRange(min: comp.min, includeMin: comp.includeMin,
+        max: comp.max, includeMax: comp.includeMax);
+  }
+  var custom = 'custom...';
+  var none = 'none';
+  var allowed = [prevMajor, prevMinor, sdkVersion]
+      .map(compatibleWith)
+      .toList()
+      ..add(custom)
+      ..add(none);
+  var currentConstraint = pubspec.sdkConstraint;
+  if (VersionConstraint.any == currentConstraint) {
+    currentConstraint = none;
+  }
+  // Remove any existing instance of current constraint.
+  allowed.remove(currentConstraint);
+  // Re-insert as first (default) option.
+  allowed.insert(0, currentConstraint);
+  // Remove duplicates.
+  allowed = new Set.from(allowed).toList();
+  var defaultsTo = allowed.first;
+  var sdkConstraintQuestion = new Question(
+      getMessageWithDefault('Sdk constraint', defaultsTo),
+      allowed: allowed,
+      defaultsTo: defaultsTo);
+
+  return ask(sdkConstraintQuestion).then((answer) {
+    if (answer == none) return null;
+    if (answer == custom) {
+      return ask(new Question(
+          'Custom sdk constraint',
+          parser: (v) => new VersionConstraint.parse(v)));
+    }
+    return answer;
+  }).then((sdkConstraint) {
+    pubspec.sdkConstraint = sdkConstraint;
+  });
+});

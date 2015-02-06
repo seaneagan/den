@@ -2,7 +2,9 @@
 library den.util;
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:pub_semver/pub_semver.dart';
 import 'package:quiver/async.dart';
 
 import 'pub.dart';
@@ -45,4 +47,9 @@ List<String> getHostedDependencyNames() => Pubspec.load().versionConstraints.key
 String enumName(enumValue) {
   var s = enumValue.toString();
   return s.substring(s.indexOf('.') + 1);
+}
+
+Version get sdkVersion {
+  var sdkString = new RegExp(r'^[^ ]+').stringMatch(Platform.version);
+  return new Version.parse(sdkString);
 }
