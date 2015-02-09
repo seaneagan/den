@@ -11,6 +11,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
 
 import 'yaml_edit.dart';
+import 'github_repo_description.dart';
 import 'git.dart';
 import 'util.dart';
 
@@ -135,22 +136,27 @@ class Pubspec {
       dummyAuthor() {
         pubspec.author = '# name <email>';
       }
+      dummyHomepage() {
+        pubspec.homepage = '# https://github.com/user/repo';
+      }
       if (hasGit) {
         return gitUserName().then((name) => gitUserEmail().then((email) {
           pubspec.author = "$name <$email>";
         })).catchError((_) => dummyAuthor()).then((_) {
-          dummyHomepage() {
-            pubspec.homepage = '# https://github.com/user/repo';
-          }
-          return githubUrl().then((url) {
+          return gitRepoHomepage().then((url) {
             if (url == null) dummyHomepage();
             pubspec.homepage = url;
           }).catchError((_) {
             dummyHomepage();
+          }).then((_) {
+            return githubRepoDescription().then((description) {
+              if (description != '') pubspec.description = description;
+            }).catchError((e) {});
           });
         });
       } else {
         dummyAuthor();
+        dummyHomepage();
       }
     }).then((_) {
       pubspec.version = new Version.parse('0.1.0');

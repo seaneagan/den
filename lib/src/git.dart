@@ -37,7 +37,7 @@ Future<bool> shouldDoGit(String packagePath) => new Future(() {
     return checkHasGit().then((hasGit) {
       if (!hasGit) {
             print('''
-This is a Git checkout, but the git command was not found.
+This is a Git repo, but the git command was not found.
 Could not create a Git tag for this release!''');
         return false;
       }
@@ -67,17 +67,16 @@ Future<List<String>> gitStatus() => runGit(['status', '--porcelain']).then((proc
 
 Future<String> gitUserName() => gitConfig('user.name');
 Future<String> gitUserEmail() => gitConfig('user.email');
-Future<String> githubUrl() => gitConfig('remote.origin.url').then(repoUrlToHomepage);
+Future<String> gitRepoHomepage() => gitConfig('remote.origin.url').then(repoUrlToHomepage);
 
 String repoUrlToHomepage(String repo) {
   var uri = Uri.parse(repo);
-  // TODO: Support other git hosts such as bitbucket.
-  if (uri.origin == 'github.com') {
-    p.Context context = p.Style.url.context;
-    var newPath = context.join(context.dirname(uri.path), context.basenameWithoutExtension(uri.path));
-    return uri.replace(scheme: 'https', path: newPath).toString();
-  }
-  return null;
+  p.Context context = p.Style.url.context;
+  // Remove '.git' suffix.
+  // TODO: This works for github and bitbucket repos, and if there are other repo hosts
+  //       that use a different convention, this should still get us close.
+  var newPath = context.join(context.dirname(uri.path), context.basenameWithoutExtension(uri.path));
+  return uri.replace(scheme: 'https', path: newPath).toString();
 }
 
 Future<String> gitConfig(String property) =>

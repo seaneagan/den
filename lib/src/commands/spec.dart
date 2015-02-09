@@ -22,12 +22,23 @@ class SpecCommand {
     new File(Pubspec.basename).exists().then((exists) =>
       new Future(() => exists ? Pubspec.load() : Pubspec.init())
       .then((pubspec) {
+        var action = exists ? 'update' : 'create';
+        print('''
+This utility will guide you through ${exists ? 'updating' : 'creating'} ${exists ? 'the local' : 'a'} pubspec
+by asking a set of questions using ${exists ? 'the existing field values as defaults' : 'sane defaults'}.
+''');
+
         InstanceMirror pubspecMirror = reflect(pubspec);
         YamlMap yamlMap = pubspec.yamlMap;
         Future.forEach(
           fields,
           (Symbol field) {
-            var question = getFieldQuestion(pubspec, field);
+            var question;
+            if (field == #description) {
+              question = getFieldQuestion(pubspec, field, defaultDefaultsTo: '');
+            } else {
+              question = getFieldQuestion(pubspec, field);
+            }
             return ask(question).then((answer) {
               pubspecMirror.setField(field, answer);
             });
@@ -35,11 +46,14 @@ class SpecCommand {
         .then((_) => promptSdkConstraint(pubspec))
         .then((_) {
           print(contentValidation(pubspec));
-          var action = exists ? 'update' : 'create';
-          return ask(new Question.confirm("${upperCaseFirst(action)} ${Pubspec.basename} as above")).then((bool correct) {
+          return ask(new Question.confirm("${upperCaseFirst(action)} pubspec as above", defaultsTo: !exists)).then((bool correct) {
             if (correct) pubspec.save();
             var negation = correct ? '' : ' ${theme.warning('not')}';
-            print("\n${Pubspec.basename}$negation ${action}d.\n");
+            var sendOff = "\nPubspec$negation ${action}d.";
+            if (correct) {
+              sendOff += '  You can now add dependencies to it with `den spec`.';
+            }
+            print(sendOff);
           });
         }).whenComplete(close);
       })
@@ -47,9 +61,10 @@ class SpecCommand {
   }
 }
 
-Question getFieldQuestion(Pubspec pubspec, Symbol field) {
+Question getFieldQuestion(Pubspec pubspec, Symbol field, { defaultDefaultsTo }) {
   var parser = parsers[field];
   var defaultsTo = reflect(pubspec).getField(field).reflectee;
+  if (defaultsTo == null) defaultsTo = defaultDefaultsTo;
   var message = MirrorSystem.getName(field);
   return new Question(message, defaultsTo: defaultsTo, parser: parser);
 }
