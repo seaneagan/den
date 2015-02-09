@@ -53,3 +53,8 @@ Version get sdkVersion {
   var sdkString = new RegExp(r'^[^ ]+').stringMatch(Platform.version);
   return new Version.parse(sdkString);
 }
+
+VersionConstraint removeCaretFromVersionConstraint(VersionRange vr) => new VersionRange(min: vr.min, includeMin: vr.includeMin,
+    max: vr.max, includeMax: vr.includeMax);
+
+String upperCaseFirst(String s) => s[0].toUpperCase() + s.substring(1);

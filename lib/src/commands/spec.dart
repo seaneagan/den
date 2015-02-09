@@ -36,7 +36,7 @@ class SpecCommand {
         .then((_) {
           print(contentValidation(pubspec));
           var action = exists ? 'update' : 'create';
-          return ask(new Question.confirm("$action pubspec as above")).then((bool correct) {
+          return ask(new Question.confirm("${upperCaseFirst(action)} ${Pubspec.basename} as above")).then((bool correct) {
             if (correct) pubspec.save();
             var negation = correct ? '' : ' ${theme.warning('not')}';
             print("\n${Pubspec.basename}$negation ${action}d.\n");
@@ -50,14 +50,8 @@ class SpecCommand {
 Question getFieldQuestion(Pubspec pubspec, Symbol field) {
   var parser = parsers[field];
   var defaultsTo = reflect(pubspec).getField(field).reflectee;
-  var message = getMessageWithDefault(MirrorSystem.getName(field), defaultsTo);
+  var message = MirrorSystem.getName(field);
   return new Question(message, defaultsTo: defaultsTo, parser: parser);
-}
-
-String getMessageWithDefault(String message, defaultsTo) {
-  var themed = theme.question(message);
-  if (defaultsTo != null) themed += " (${theme.questionDefault(defaultsTo.toString())})";
-  return themed;
 }
 
 // TODO: Add sdk constraint.
@@ -101,8 +95,7 @@ Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() 
   // Can't use [VersionConstraint.compatibleWith] directly since the [toString] will use `^`.
   VersionConstraint compatibleWith(Version version) {
     var comp = new VersionConstraint.compatibleWith(version);
-    return new VersionRange(min: comp.min, includeMin: comp.includeMin,
-        max: comp.max, includeMax: comp.includeMax);
+    return removeCaretFromVersionConstraint(comp);
   }
   var custom = 'custom...';
   var none = 'none';
@@ -123,7 +116,7 @@ Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() 
   allowed = new Set.from(allowed).toList();
   var defaultsTo = allowed.first;
   var sdkConstraintQuestion = new Question(
-      getMessageWithDefault('Sdk constraint', defaultsTo),
+      'Sdk constraint',
       allowed: allowed,
       defaultsTo: defaultsTo);
 
@@ -132,10 +125,18 @@ Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() 
     if (answer == custom) {
       return ask(new Question(
           'Custom sdk constraint',
-          parser: (v) => new VersionConstraint.parse(v)));
+          parser: (v) {
+            var constraint = new VersionConstraint.parse(v);
+            if (constraint.toString().contains('^')) {
+              var fixed = removeCaretFromVersionConstraint(constraint);
+              print('Sdk constraints cannot use ^, using "$fixed" instead.');
+              return fixed;
+            }
+            return constraint;
+          }));
     }
     return answer;
   }).then((sdkConstraint) {
-    pubspec.sdkConstraint = sdkConstraint;
+      pubspec.sdkConstraint = sdkConstraint;
   });
 });
