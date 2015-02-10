@@ -17,15 +17,34 @@ import '../util.dart';
 
 class SpecCommand {
 
-  @SubCommand(help: 'Initialize or edit a pubspec file.')
-  spec() {
+  @SubCommand(help: '''
+Guides you through creating a pubspec by prompting for field values using 
+defaults based on your local git info etc.
+
+To use only defaults, and avoid the prompts, pass --force.
+
+If there is already an existing pubspec, the prompts will default to the
+existing field values instead.''')
+  spec({
+      @Flag(abbr: 'f', help: 'Use only defaults, do not prompt')
+      bool force: false}) {
     new File(Pubspec.basename).exists().then((exists) =>
       new Future(() => exists ? Pubspec.load() : Pubspec.init())
       .then((pubspec) {
-        var action = exists ? 'update' : 'create';
+      var action = exists ? 'update' : 'create';
+        if (force) {
+          if (exists) {
+            print('Can\'t use --force to $action a pubspec.');
+            exit(1);
+          }
+          save(pubspec, action, true);
+          return;
+        }
+
         print('''
-This utility will guide you through ${exists ? 'updating' : 'creating'} ${exists ? 'the local' : 'a'} pubspec
-by asking a set of questions using ${exists ? 'the existing field values as defaults' : 'sane defaults'}.
+
+Please answer the prompts below to $action ${exists ? 'the local' : 'a'} pubspec.
+(Defaults are based on ${exists ? 'existing field values' : 'your local git info etc.'})
 ''');
 
         InstanceMirror pubspecMirror = reflect(pubspec);
@@ -46,14 +65,8 @@ by asking a set of questions using ${exists ? 'the existing field values as defa
         .then((_) => promptSdkConstraint(pubspec))
         .then((_) {
           print(contentValidation(pubspec));
-          return ask(new Question.confirm("${upperCaseFirst(action)} pubspec as above", defaultsTo: !exists)).then((bool correct) {
-            if (correct) pubspec.save();
-            var negation = correct ? '' : ' ${theme.warning('not')}';
-            var sendOff = "\nPubspec$negation ${action}d.";
-            if (correct) {
-              sendOff += '  You can now add dependencies to it with `den spec`.';
-            }
-            print(sendOff);
+          return ask(new Question.confirm("${upperCaseFirst(action)} pubspec as above", defaultsTo: exists ? null : true)).then((bool correct) {
+            save(pubspec, action, correct);
           });
         }).whenComplete(close);
       })
@@ -97,6 +110,16 @@ final parsers = {
     throw errors.first;
   }
 };
+
+save(Pubspec pubspec, String action, bool shouldSave) {
+  if (shouldSave) pubspec.save();
+  var negation = shouldSave ? '' : ' ${theme.warning('not')}';
+  var sendOff = "\nPubspec$negation ${action}d.";
+  if (shouldSave) {
+    sendOff += '  You can now add dependencies to it with `den spec`.';
+  }
+  print(sendOff);
+}
 
 // TODO: Make contents syntax highlighted.
 String contentValidation(Pubspec pubspec) => '''
