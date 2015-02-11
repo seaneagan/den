@@ -14,6 +14,7 @@ import '../check_package_name.dart';
 import '../pub.dart';
 import '../theme.dart';
 import '../util.dart';
+import '../yaml_highlighter.dart';
 
 class SpecCommand {
 
@@ -31,13 +32,23 @@ existing field values instead.''')
     new File(Pubspec.basename).exists().then((exists) =>
       new Future(() => exists ? Pubspec.load() : Pubspec.init())
       .then((pubspec) {
-      var action = exists ? 'update' : 'create';
+        var action = exists ? 'update' : 'create';
+        save(bool shouldSave) {
+          if (shouldSave) pubspec.save();
+          var negation = shouldSave ? '' : ' ${theme.warning('not')}';
+          var sendOff = "\nPubspec$negation ${action}d.";
+          if (shouldSave && !exists) {
+            sendOff += '  You can now add dependencies to it with `den install`.';
+          }
+          print(sendOff);
+        }
+
         if (force) {
           if (exists) {
             print('Can\'t use --force to $action a pubspec.');
             exit(1);
           }
-          save(pubspec, action, true);
+          save(true);
           return;
         }
 
@@ -66,7 +77,7 @@ Please answer the prompts below to $action ${exists ? 'the local' : 'a'} pubspec
         .then((_) {
           print(contentValidation(pubspec));
           return ask(new Question.confirm("${upperCaseFirst(action)} pubspec as above", defaultsTo: exists ? null : true)).then((bool correct) {
-            save(pubspec, action, correct);
+            save(correct);
           });
         }).whenComplete(close);
       })
@@ -111,20 +122,9 @@ final parsers = {
   }
 };
 
-save(Pubspec pubspec, String action, bool shouldSave) {
-  if (shouldSave) pubspec.save();
-  var negation = shouldSave ? '' : ' ${theme.warning('not')}';
-  var sendOff = "\nPubspec$negation ${action}d.";
-  if (shouldSave) {
-    sendOff += '  You can now add dependencies to it with `den spec`.';
-  }
-  print(sendOff);
-}
-
-// TODO: Make contents syntax highlighted.
 String contentValidation(Pubspec pubspec) => '''
 
-${indent(pubspec.contents, 2)}''';
+${indent(new YamlHighlighter(pubspec.contents, pubspec.yamlMap, yamlHighlighterTheme).toString(), 2)}''';
 
 Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() {
   var prevMajor = new Version(sdkVersion.major, 0, 0);

@@ -3,6 +3,8 @@ library den.theme;
 
 import 'package:ansicolor/ansicolor.dart';
 
+import 'yaml_highlighter.dart';
+
 class DenTheme {
   final AnsiPen title = new AnsiPen()..white(bold: true);
   final AnsiPen dependency = new AnsiPen()..green(bold: true);
@@ -12,8 +14,8 @@ class DenTheme {
   final AnsiPen error = new AnsiPen()..red(bold: true);
   final AnsiPen question = new AnsiPen()..white();
   final AnsiPen questionDefault = new AnsiPen()..green(bold: true);
-  final AnsiPen field = new AnsiPen()..green(bold: true);
-  final AnsiPen value = new AnsiPen()..blue(bold:true);
+  final AnsiPen yamlKey = new AnsiPen()..green(bold: true);
+  final AnsiPen yamlScalar = new AnsiPen()..blue(bold:true);
 }
 
 final theme = new DenTheme();
@@ -24,3 +26,10 @@ ${theme.title(title + ':')}
 
 ${lines.map((line) => '  $line').join('\n')}
 ''';
+
+class DenYamlHighlighterTheme implements YamlHighlighterTheme {
+  String formatKey(String key) => theme.yamlKey(key);
+  String formatScalar(String scalar) => theme.yamlScalar(scalar);
+}
+
+final YamlHighlighterTheme yamlHighlighterTheme = new DenYamlHighlighterTheme();
