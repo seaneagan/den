@@ -97,6 +97,18 @@ dev_dependencies:
 ''');
   });
 
+  test('should add a git dependency as first dependency', () {
+    testAddDependency(
+        new PackageDep('bar', 'git', null, 'git://github.com/foo/bar.git'),
+        preamble,
+        '''
+$preamble
+dependencies:
+  bar:
+    git: git://github.com/foo/bar.git
+''');
+  });
+
   test('should add a git dependency with ref', () {
     testAddDependency(
         new PackageDep('abc', 'git', null, {

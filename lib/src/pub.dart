@@ -242,10 +242,11 @@ class Pubspec {
 
     var location = dev ? 'dev_dependencies' : 'dependencies';
     var containerValue = _yamlMap[location];
+    var ownLine = dep.description != null;
     if(containerValue == null) {
-      contents = setMapKey(_contents, _yamlMap, location, "${dep.name}: $depSourceDescription", true);
+      var lineSeparator = ownLine ? '\n  ' : ' ';
+      contents = setMapKey(_contents, _yamlMap, location, "${dep.name}:$lineSeparator$depSourceDescription", true);
     } else {
-      var ownLine = dep.description != null;
       contents = setMapKey(_contents, _yamlMap[location], dep.name, depSourceDescription, ownLine);
     }
     return old;
