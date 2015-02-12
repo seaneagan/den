@@ -28,6 +28,11 @@ den install <your package name>
 ```shell
 # `den ...` requires Dart >=1.7, on 1.6 use `pub global run den ...`
 
+# Create a pubspec.  Field value prompts default to your local git info.
+den spec
+# Bypass prompts, accept defaults.
+den spec --force
+
 # Bump your pubspec version (and do a tagged version commit if in a git repo)
 den bump 1.2.3
 den bump patch

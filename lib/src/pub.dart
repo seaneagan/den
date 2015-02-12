@@ -15,7 +15,6 @@ import 'github_repo_description.dart';
 import 'git.dart';
 import 'util.dart';
 
-
 class Pubspec {
 
   String get contents => _contents;
