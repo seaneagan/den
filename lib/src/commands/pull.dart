@@ -1,6 +1,8 @@
 
 library den.src.commands.pull;
 
+import 'dart:async';
+
 import 'package:unscripted/unscripted.dart';
 
 import '../pub.dart';
@@ -18,8 +20,7 @@ class PullCommand {
       {
       @Flag(negatable: true)
       bool caret
-    }) {
-    var pubspec = Pubspec.load();
+    }) => Pubspec.load().then((pubspec) {
     caret = defaultCaret(caret, pubspec);
     onInvalid(Iterable<String> invalid) {
       print('Can only pull existing hosted dependencies, which do not include: $invalid');
@@ -41,7 +42,5 @@ class PullCommand {
 
       print(block('Updated dependencies', lines));
     });
-  }
+  });
 }
-
-List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;

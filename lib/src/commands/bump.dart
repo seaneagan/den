@@ -65,9 +65,8 @@ Do a pre-release with an id e.g. "beta".  If already on an
 The git commit message template.  Any instance of "{v}" will 
 be replaced by the new version.""")
        String message
-  }) {
+  }) => Pubspec.load().then((pubspec) {
 
-    var pubspec = Pubspec.load();
     var version = pubspec.version;
 
     Version newVersion;
@@ -109,7 +108,7 @@ be replaced by the new version.""")
         return taggedVersionCommit(newVersion, packagePath, messageTemplate: message);
       }
     });
-  }
+  });
 }
 
 _getAllowedReleaseTypes() => new Map.fromIterables(

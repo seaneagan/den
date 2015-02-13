@@ -7,6 +7,7 @@ import 'package:unscripted/unscripted.dart';
 
 import '../pub.dart';
 import '../theme.dart';
+import '../util.dart';
 
 class UninstallCommand {
   @SubCommand(help: 'Remove dependencies')
@@ -14,10 +15,9 @@ class UninstallCommand {
       @Rest(
           required: true,
           valueHelp: 'package name',
-          allowed: _getImmediateDependencyNames,
+          allowed: getImmediateDependencyNames,
           help: 'Name of dependency to remove')
-      List<String> names) {
-    var pubspec = Pubspec.load();
+      List<String> names) => Pubspec.load().then((pubspec) {
     var removedDeps = names.fold({}, (removedDeps, name) {
       var removed = pubspec.undepend(name);
       if(removed != null) removedDeps[name] = removed;
@@ -37,7 +37,5 @@ class UninstallCommand {
       print('No (dev_)dependencies removed.');
     }
 
-  }
+  });
 }
-
-List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;

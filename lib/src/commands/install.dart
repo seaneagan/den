@@ -48,10 +48,9 @@ class InstallCommand {
       bool dev: false,
       @Flag(negatable: true)
       bool caret
-  }) {
+  }) => Pubspec.load().then((pubspec) {
     // TODO: Validate existing pubspec, and fail if necessary.
     //       See dartbug.com/21169
-    var pubspec = Pubspec.load();
     caret = defaultCaret(caret, pubspec);
     new Future(() {
       return Future.wait(packages
@@ -81,8 +80,7 @@ class InstallCommand {
       });
       print(block('Installed these ${dev ? 'dev_' : ''}dependencies', lines));
     });
-
-  }
+  });
 }
 
 class _SplitPackage {

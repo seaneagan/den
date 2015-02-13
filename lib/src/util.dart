@@ -42,7 +42,15 @@ bool defaultCaret(bool caret, Pubspec pubspec) {
   return pubspec.caretAllowed;
 }
 
-List<String> getHostedDependencyNames() => Pubspec.load().versionConstraints.keys.toList();
+VersionConstraint removeCaretFromVersionConstraint(VersionRange vr) =>
+    new VersionRange(min: vr.min, includeMin: vr.includeMin, max: vr.max,
+        includeMax: vr.includeMax);
+
+Future<List<String>> getHostedDependencyNames() =>
+    Pubspec.load().then((pubspec) => pubspec.versionConstraints.keys.toList());
+
+Future<List<String>> getImmediateDependencyNames() =>
+    Pubspec.load().then((pubspec) => pubspec.immediateDependencyNames);
 
 String enumName(enumValue) {
   var s = enumValue.toString();
@@ -54,7 +62,6 @@ Version get sdkVersion {
   return new Version.parse(sdkString);
 }
 
-VersionConstraint removeCaretFromVersionConstraint(VersionRange vr) => new VersionRange(min: vr.min, includeMin: vr.includeMin,
-    max: vr.max, includeMax: vr.includeMax);
-
 String upperCaseFirst(String s) => s[0].toUpperCase() + s.substring(1);
+
+

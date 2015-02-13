@@ -14,8 +14,7 @@ class FetchCommand {
           valueHelp: 'package name',
           allowed: util.getHostedDependencyNames,
           help: 'Name of dependency to fetch.  If omitted, then fetches all dependencies in the pubspec.')
-      Iterable<String> names) {
-    var pubspec = Pubspec.load();
+      Iterable<String> names) => Pubspec.load().then((pubspec) {
     onInvalid(Iterable<String> invalid) {
       print('Can only fetch existing hosted dependencies, which do not include: $invalid');
     }
@@ -31,8 +30,5 @@ class FetchCommand {
       });
       print(block('Outdated dependencies', lines));
     });
-  }
-
+  });
 }
-
-List<String> _getImmediateDependencyNames() => Pubspec.load().immediateDependencyNames;

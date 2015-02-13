@@ -169,15 +169,16 @@ class Pubspec {
     });
   });
 
-  static Pubspec load([String path]) {
+  static Future<Pubspec> load([String path]) {
     var packageRoot = _getPackageRoot(path == null ? p.current : path);
     var pubspecPath = p.join(packageRoot, basename);
-    var contents = new File(pubspecPath).readAsStringSync();
-    var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
-    return new Pubspec(
-        pubspecPath,
-        contents,
-        yaml);
+    return new File(pubspecPath).readAsString().then((contents) {
+      var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
+      return new Pubspec(
+          pubspecPath,
+          contents,
+          yaml);
+    });
   }
 
   undepend(String packageName) {
