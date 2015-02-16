@@ -27,27 +27,32 @@ class Pubspec {
   YamlMap _yamlMap;
   String get path => _path;
   final String _path;
+
   String get name => _yamlMap['name'];
   set name(String _name) {
     contents = setMapKey(_contents, _yamlMap, 'name', _name, false);
   }
+
   String get author => _yamlMap['author'];
   set author(String _author) {
     _setValue('author', _author);
   }
+
   Version get version => new Version.parse(_yamlMap['version']);
   set version(Version v) {
     contents = setMapKey(_contents, _yamlMap, 'version', v.toString(), false);
   }
+
   String get homepage => _yamlMap['homepage'];
-  set homepage(String _homepage) {
-    _setValue('homepage', _homepage);
-  }
+  set homepage(String _homepage) => _setValue('homepage', _homepage);
+
   String get documentation => _yamlMap['documentation'];
+
   String get description => _yamlMap['description'];
   set description(String _description) {
     _setValue('description', _description);
   }
+
   void _setValue(String key, String value) {
     if(value != null && value != '') {
       contents = setMapKey(_contents, _yamlMap, key, value, false);
@@ -55,6 +60,7 @@ class Pubspec {
       contents = deleteMapKey(_contents, _yamlMap, key);
     }
   }
+
   VersionConstraint get sdkConstraint {
     var env = _yamlMap['environment'];
     if (env == null) return VersionConstraint.any;
@@ -83,15 +89,19 @@ class Pubspec {
       contents = setMapKey(_contents, env, 'sdk', "'$constraint'", false);
     }
   }
+
   Map<String, dynamic> get dependencies =>
       _yamlMap.containsKey('dependencies') ?
           _yamlMap['dependencies'] : const {};
+
   Map<String, dynamic> get devDependencies =>
       _yamlMap.containsKey('dev_dependencies') ?
           _yamlMap['dev_dependencies'] : const {};
+
   Map<String, dynamic> get dependencyOverrides =>
       _yamlMap.containsKey('dependency_overrides') ?
           _yamlMap['dependency_overrides'] : const {};
+
   List<String> get immediateDependencyNames => []
       ..addAll(dependencies.keys)
       ..addAll(devDependencies.keys);
@@ -115,6 +125,7 @@ class Pubspec {
     }
     return _versionConstraints;
   }
+
   Map<String, VersionConstraint> _versionConstraints;
 
   Pubspec(
