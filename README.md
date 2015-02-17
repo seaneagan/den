@@ -1,10 +1,7 @@
 den [![pub package](http://img.shields.io/pub/v/den.svg)](https://pub.dartlang.org/packages/den) [![Build Status](https://drone.io/github.com/seaneagan/den/status.png)](https://drone.io/github.com/seaneagan/den/latest)
 ===
 
-*A pubspec authoring tool.*
-
-Den provides the following CLI commands to manipulate and analyze your pubspec:
-`bump`, `install`, `uninstall`, `fetch`, and `pull`.
+A pubspec authoring tool.
 
 ##Install
 
@@ -13,17 +10,6 @@ pub global activate den
 ```
 
 ##Usage
-
-###Package Authors
-
-Add the following package installation instructions to your README:
-
-```shell
-pub global activate den
-den install <your package name>
-```
-
-###End Users
 
 ```shell
 # `den ...` requires Dart >=1.7, on 1.6 use `pub global run den ...`
@@ -69,6 +55,15 @@ den install unit[TAB] -> unittest
 den uninstall j[TAB] -> junk
 den fetch p[TAB] -> polymer
 den pull p[TAB] -> polymer
+```
+
+###Package Authors
+
+Add the following package installation instructions to your README:
+
+```shell
+pub global activate den
+den install <your package name>
 ```
 
 ##^ Constraints
