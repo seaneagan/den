@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -o xtrace
 
-pub get
-
 # Run tests.
 pub global activate test_runner
 test_runner -v
