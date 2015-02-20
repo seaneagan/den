@@ -7,7 +7,6 @@ import 'dart:io';
 import 'package:unscripted/unscripted.dart';
 import 'package:prompt/prompt.dart';
 import 'package:pub_semver/pub_semver.dart';
-import 'package:yaml/yaml.dart';
 
 import '../check_package_author.dart';
 import '../check_package_name.dart';
@@ -59,7 +58,6 @@ Please answer the prompts below to $action ${exists ? 'the local' : 'a'} pubspec
 ''');
 
         InstanceMirror pubspecMirror = reflect(pubspec);
-        YamlMap yamlMap = pubspec.yamlMap;
         Future.forEach(
           fields,
           (Symbol field) {
@@ -129,7 +127,6 @@ ${indent(new YamlHighlighter(pubspec.contents, pubspec.yamlMap, yamlHighlighterT
 Future<VersionConstraint> promptSdkConstraint(Pubspec pubspec) => new Future(() {
   var prevMajor = new Version(sdkVersion.major, 0, 0);
   var prevMinor = new Version(sdkVersion.major, sdkVersion.minor, 0);
-  var nextMajor = sdkVersion.nextMajor;
   // Can't use [VersionConstraint.compatibleWith] directly since the [toString] will use `^`.
   VersionConstraint compatibleWith(Version version) {
     var comp = new VersionConstraint.compatibleWith(version);

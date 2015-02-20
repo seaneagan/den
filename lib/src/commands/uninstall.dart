@@ -27,7 +27,6 @@ class UninstallCommand {
     pubspec.save();
 
     if (removedDeps.isNotEmpty) {
-      var buffer = new StringBuffer();
       var lines = [];
       removedDeps.forEach((name, old) {
         lines.add('${theme.dependency(name)}${theme.info(': ')}${theme.version(JSON.encode(old))}');

@@ -1,8 +1,6 @@
 
 library den.src.commands.pull;
 
-import 'dart:async';
-
 import 'package:unscripted/unscripted.dart';
 
 import '../pub.dart';

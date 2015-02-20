@@ -3,16 +3,15 @@ set -o xtrace
 
 pub get
 
-# TODO: Remove once https://github.com/drone/drone/issues/821 is fixed.
-export PATH="$PATH":"~/.pub-cache/bin"
-
 # Run tests.
 pub global activate test_runner
 test_runner -v
 
-# TODO: dartanalyzer on all libraries
+# Analyze all libraries.
+pub global activate tuneup
+tuneup check
 
-# Install dart_coveralls; gather and send coverage data.
+# Code coverage.
 if [ "$REPO_TOKEN" ]; then
   pub global activate dart_coveralls
   dart_coveralls report --token $REPO_TOKEN --retry 3 test/test.dart

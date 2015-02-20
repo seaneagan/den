@@ -48,7 +48,6 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
       getEndIndex(previousValueNode, keyNode) :
       keyNode.span.start.offset;
   var endIndex = getEndIndex(valueNode, nextKeyNode);
-  var removed = yaml.substring(startIndex, endIndex);
 
 //  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
 //  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
@@ -96,7 +95,6 @@ String setMapKey(String yaml, YamlMap mapNode, String key, value, bool ownLine) 
 }
 
 String replaceSpan(String wholeText, String newText, SourceLocation start, SourceLocation end) {
-  var toReplace = new SourceSpan(start, end, wholeText.substring(start.offset, end.offset));
   // TODO: Show a diff (with red/green ansicolor), and add an interactive mode which will prompt "Is this OK? (y/n): "
   return (new StringBuffer()
       ..write(wholeText.substring(0, start.offset))
