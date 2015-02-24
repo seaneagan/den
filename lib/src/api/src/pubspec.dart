@@ -15,6 +15,7 @@ import 'github_repo_description.dart';
 import 'package_dep.dart';
 import 'release_type.dart';
 import 'util.dart';
+import 'version_status.dart';
 import 'yaml_edit.dart';
 
 class Pubspec {
@@ -31,13 +32,13 @@ class Pubspec {
   final String _path;
 
   String get name => _yamlMap['name'];
-  set name(String _name) {
-    contents = setMapKey(_contents, _yamlMap, 'name', _name, false);
+  set name(String v) {
+    contents = setMapKey(_contents, _yamlMap, 'name', v, false);
   }
 
   String get author => _yamlMap['author'];
-  set author(String _author) {
-    _setValue('author', _author);
+  set author(String v) {
+    _setValue('author', v);
   }
 
   Version get version => new Version.parse(_yamlMap['version']);
@@ -46,17 +47,18 @@ class Pubspec {
   }
 
   String get homepage => _yamlMap['homepage'];
-  set homepage(String _homepage) => _setValue('homepage', _homepage);
+  set homepage(String v) => _setValue('homepage', v);
 
   String get documentation => _yamlMap['documentation'];
+  set documentation(String v) => _setValue('documentation', v);
 
   String get description => _yamlMap['description'];
-  set description(String _description) {
-    _setValue('description', _description);
+  set description(String v) {
+    _setValue('description', v);
   }
 
   void _setValue(String key, String value) {
-    if(value != null && value != '') {
+    if (value != null && value != '') {
       contents = setMapKey(_contents, _yamlMap, key, value, false);
     } else {
       contents = deleteMapKey(_contents, _yamlMap, key);
@@ -152,6 +154,7 @@ class Pubspec {
         pubspec.homepage = '# https://github.com/user/repo';
       }
       if (shouldGit) {
+        print('doing git');
         return gitUserName().then((name) => gitUserEmail().then((email) {
           pubspec.author = "$name <$email>";
         })).catchError((_) => dummyAuthor()).then((_) {
@@ -167,6 +170,7 @@ class Pubspec {
           });
         });
       } else {
+        print('not doing git');
         dummyAuthor();
         dummyHomepage();
       }
@@ -265,7 +269,17 @@ class Pubspec {
     return old;
   }
 
-  bump(ReleaseType releaseType, {pre: false}) => version = bumpVersion(version, releaseType, pre: pre);
+  void bump(ReleaseType releaseType, {pre: false}) {
+    version = bumpVersion(version, releaseType, pre: pre);
+  }
+
+  Future<VersionStatus> fetch(String packageName) {
+    var constraint = versionConstraints[packageName];
+    var dev = devDependencies.containsKey(packageName);
+    return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
+      return new VersionStatus(package.versions, constraint, dev);
+    });
+  }
 
   /// Adds/updates [sdkConstraint] as necessary to support carets,
   /// and returns whether or not it was necessary.
@@ -290,7 +304,6 @@ class Pubspec {
 
   /// The range of all pub versions that do support `^` version constraints.
   final _postCaretPubVersions = new VersionConstraint.parse("^1.8.0");
-
 
   void save() {
     new File(path).writeAsStringSync(contents);
@@ -319,18 +332,4 @@ class Pubspec {
         "No package root (containing pubspec.yaml) "
         "found in hierarchy of path: $subPath");
   }
-}
-
-VersionRange getCompatibleVersionRange(Version version) =>
-    new VersionRange(min: version, max: version.nextBreaking, includeMin: true);
-
-Future<Version> fetchPrimaryVersion(String packageName) {
-  return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
-    return Version.primary(package.versions);
-  });
-}
-
-VersionConstraint parseVersionConstraint(String constraint) {
-  if(constraint == null) return null;
-  return new VersionConstraint.parse(constraint);
 }

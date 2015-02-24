@@ -1,13 +1,8 @@
 
 library den_api.src.version_status;
 
-import 'dart:async';
-
 import 'package:contrast/contrast.dart';
-import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
-
-import 'pubspec.dart';
 
 class VersionStatus {
 
@@ -42,14 +37,6 @@ class VersionStatus {
     return new VersionRange(min: min, max: updateTo.nextBreaking, includeMin: includeMin);
   }
 
-  VersionStatus._(this._versions, this.constraint, this.dev);
-
-  static Future<VersionStatus> fetch(Pubspec pubspec, String packageName) {
-    var constraint = pubspec.versionConstraints[packageName];
-    var dev = pubspec.devDependencies.containsKey(packageName);
-    return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
-      return new VersionStatus._(package.versions, constraint, dev);
-    });
-  }
+  VersionStatus(this._versions, this.constraint, this.dev);
 }
 

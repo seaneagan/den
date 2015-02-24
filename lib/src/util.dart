@@ -25,8 +25,8 @@ Future<Map<String, VersionStatus>> fetch(Pubspec pubspec, Iterable<String> names
   }
 
   return reduceAsync(names, {}, (outdated, name) {
-    return VersionStatus.fetch(pubspec, name).then((VersionStatus status) {
-      if(status.isOutdated) outdated[name] = status;
+    return pubspec.fetch(name).then((VersionStatus status) {
+      if (status.isOutdated) outdated[name] = status;
       return outdated;
     });
   });

@@ -49,9 +49,6 @@ String deleteMapKey(String yaml, YamlMap mapNode, String key) {
       keyNode.span.start.offset;
   var endIndex = getEndIndex(valueNode, nextKeyNode);
 
-//  var startIndex = keyNode.span.start.offset - keyNode.span.start.column;
-//  var endIndex = yaml.indexOf('\n', valueNode.span.end.offset - 1) + 1;
-
   return yaml.substring(0, startIndex) + yaml.substring(endIndex);
 }
 

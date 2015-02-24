@@ -1,5 +1,5 @@
 
-library den.test.pub;
+library den.test.pubspec;
 
 import 'package:den/src/api/src/pubspec.dart';
 import 'package:den/src/api/src/package_dep.dart';

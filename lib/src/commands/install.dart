@@ -4,6 +4,8 @@ library den.src.commands.install;
 import 'dart:async';
 
 import '../api/den_api.dart';
+// TODO: Don't depend on private code.
+import '../api/src/util.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
