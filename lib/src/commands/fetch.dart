@@ -1,9 +1,9 @@
 
 library den.src.commands.fetch;
 
+import '../api/den_api.dart';
 import 'package:unscripted/unscripted.dart';
 
-import '../pub.dart';
 import '../theme.dart';
 import '../util.dart' as util;
 

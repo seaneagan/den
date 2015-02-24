@@ -1,7 +1,8 @@
 
 library den.test.pub;
 
-import 'package:den/src/pub.dart';
+import 'package:den/src/api/src/pubspec.dart';
+import 'package:den/src/api/src/package_dep.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:unittest/unittest.dart';

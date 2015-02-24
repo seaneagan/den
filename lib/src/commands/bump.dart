@@ -1,13 +1,14 @@
 
 library den.src.commands.bump;
 
+import '../api/den_api.dart';
+// TODO: Don't depend on private code.
+import '../api/src/util.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:unscripted/unscripted.dart';
 
-import '../bump.dart';
 import '../git.dart';
-import '../pub.dart';
 import '../theme.dart';
 import '../util.dart';
 
@@ -69,11 +70,11 @@ be replaced by the new version.""")
 
     var version = pubspec.version;
 
-    Version newVersion;
-
     var effectivePre = preId == null ? pre : preId;
 
     if (strategy is Version) {
+      Version newVersion;
+
       if (strategy.isPreRelease) {
         if (false != effectivePre) {
           throw 'Cannot specify --pre or --pre-id and an exact version with a '
@@ -88,24 +89,32 @@ be replaced by the new version.""")
       if (version == newVersion) {
         throw 'Cannot bump to the same version: $version';
       }
+
+      pubspec.version = newVersion;
     } else {
       var releaseType = strategy as ReleaseType;
-      newVersion = bumpVersion(version, releaseType, pre: effectivePre);
+      pubspec.bump(releaseType, pre: effectivePre);
     }
 
     var packagePath = p.dirname(pubspec.path);
 
-    shouldDoGit(packagePath).then((should) {
-      pubspec.version = newVersion;
+    shouldDoTaggedVersionCommit(packagePath).then((should) {
       pubspec.save();
       print(
           theme.info('Bumped version from ') +
-          theme.version(version.toString()) +
+          theme.version(pubspec.version.toString()) +
           theme.info(' to ') +
-          theme.version(newVersion.toString()));
+          theme.version(pubspec.version.toString()));
 
       if (should) {
-        return taggedVersionCommit(newVersion, packagePath, messageTemplate: message);
+        return taggedVersionCommit(pubspec.version, packagePath, messageTemplate: message);
+      } else {
+        print(theme.warning('''
+Could not create a version-tagged git commit for this release, due to one of the following:
+
+* The git command was not found.
+* This is not a Git repo.
+* This git repo is not clean.'''));
       }
     });
   });

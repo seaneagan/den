@@ -1,7 +1,10 @@
 
-library den.src.bump;
+library den_api.src.bump;
 
 import 'package:pub_semver/pub_semver.dart';
+
+import 'release_type.dart';
+import 'util.dart';
 
 Version bumpVersion(Version version, ReleaseType releaseType, {pre: false}) {
   if (releaseType == ReleaseType.release && !version.isPreRelease) {
@@ -32,12 +35,6 @@ Version bumpVersion(Version version, ReleaseType releaseType, {pre: false}) {
   return withPreRelease(newRelease, newPreRelease);
 }
 
-Version withPreRelease(Version version, List preRelease) =>
-    new Version(version.major, version.minor, version.patch,
-        pre: preRelease == null ? null : preRelease.join('.'));
-
-List createPreRelease(pre) => false == pre ? null : pre is String ? _preReleaseWithId(pre, 0) : [0];
-
 List updatePreRelease(List preRelease, pre) {
   if (false == pre) return [];
   switch (preRelease.length) {
@@ -48,7 +45,7 @@ List updatePreRelease(List preRelease, pre) {
         var oldId = preRelease.single;
         var newId = pre is! String ? oldId : pre;
         if (newId == oldId) {
-          return _preReleaseWithId(newId, 0);
+          return preReleaseWithId(newId, 0);
         }
         break;
       }
@@ -57,7 +54,7 @@ List updatePreRelease(List preRelease, pre) {
       if (preRelease.first is String && preRelease.last is int) {
         var newId = pre is! String ? preRelease.first : pre;
         if (newId == preRelease.first) {
-          return _preReleaseWithId(newId, preRelease.last + 1);
+          return preReleaseWithId(newId, preRelease.last + 1);
         }
         break;
       }
@@ -68,8 +65,6 @@ List updatePreRelease(List preRelease, pre) {
   return createPreRelease(pre);
 }
 
-_preReleaseWithId(String id, int index) => [id, index];
-
 withBuild(Version v, List build) =>
     new Version(v.major, v.minor, v.patch,
         pre: v.preRelease.isEmpty ? null : v.preRelease.join('.'),
@@ -79,21 +74,4 @@ List updateBuild(List build) {
   if (build.isEmpty) return [1];
   if (build.length == 1) return [build.single + 1];
   throw 'Cannot increment unrecognized build "${build.join('.')}';
-}
-
-class ReleaseType {
-  final String _name;
-
-  const ReleaseType._(this._name);
-
-  static const ReleaseType major = const ReleaseType._('major');
-  static const ReleaseType minor = const ReleaseType._('minor');
-  static const ReleaseType patch = const ReleaseType._('patch');
-  static const ReleaseType breaking = const ReleaseType._('breaking');
-  static const ReleaseType release = const ReleaseType._('release');
-  static const ReleaseType build = const ReleaseType._('build');
-
-  static List<ReleaseType> values = [major, minor, patch, breaking, release, build];
-
-  String toString() => 'ReleaseType.$_name';
 }

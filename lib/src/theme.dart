@@ -1,5 +1,5 @@
 
-library den.theme;
+library den.src.theme;
 
 import 'package:ansicolor/ansicolor.dart';
 

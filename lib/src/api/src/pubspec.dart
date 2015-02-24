@@ -1,19 +1,21 @@
 
-library den.pub;
+library den_api.src.pubspec;
 
 import 'dart:async';
 import 'dart:io';
 
-import 'package:contrast/contrast.dart';
 import 'package:path/path.dart' as p;
 import 'package:pub_package_data/pub_package_data.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:yaml/yaml.dart';
 
-import 'yaml_edit.dart';
-import 'github_repo_description.dart';
+import 'bump.dart';
 import 'git.dart';
+import 'github_repo_description.dart';
+import 'package_dep.dart';
+import 'release_type.dart';
 import 'util.dart';
+import 'yaml_edit.dart';
 
 class Pubspec {
 
@@ -142,14 +144,14 @@ class Pubspec {
     var contents = "name: $name";
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     var pubspec = new Pubspec(pubspecPath, contents, yaml);
-    return checkHasGit().then((hasGit) {
+    return shouldDoGit(pubspec.path).then((shouldGit) {
       dummyAuthor() {
         pubspec.author = '# name <email>';
       }
       dummyHomepage() {
         pubspec.homepage = '# https://github.com/user/repo';
       }
-      if (hasGit) {
+      if (shouldGit) {
         return gitUserName().then((name) => gitUserEmail().then((email) {
           pubspec.author = "$name <$email>";
         })).catchError((_) => dummyAuthor()).then((_) {
@@ -263,6 +265,8 @@ class Pubspec {
     return old;
   }
 
+  bump(ReleaseType releaseType, {pre: false}) => version = bumpVersion(version, releaseType, pre: pre);
+
   /// Adds/updates [sdkConstraint] as necessary to support carets,
   /// and returns whether or not it was necessary.
   bool _ensureSdkConstraintAllowsCaret() {
@@ -314,113 +318,6 @@ class Pubspec {
     throw new ArgumentError(
         "No package root (containing pubspec.yaml) "
         "found in hierarchy of path: $subPath");
-  }
-}
-
-/// This is the private base class of [PackageRef], [PackageID], and
-/// [PackageDep].
-///
-/// It contains functionality and state that those classes share but is private
-/// so that from outside of this library, there is no type relationship between
-/// those three types.
-class _PackageName {
-  _PackageName(this.name, this.source, this.description);
-
-  /// The name of the package being identified.
-  final String name;
-
-  /// The name of the [Source] used to look up this package given its
-  /// [description].
-  ///
-  /// If this is a root package, this will be `null`.
-  final String source;
-
-  /// The metadata used by the package's [source] to identify and locate it.
-  ///
-  /// It contains whatever [Source]-specific data it needs to be able to get
-  /// the package. For example, the description of a git sourced package might
-  /// by the URL "git://github.com/dart/uilib.git".
-  final description;
-
-  /// Whether this package is the root package.
-  bool get isRoot => source == null;
-
-  String toString() {
-    if (isRoot) return "$name (root)";
-    return "$name from $source";
-  }
-
-  /// Returns a [PackageDep] for this package with the given version constraint.
-  PackageDep withConstraint(VersionConstraint constraint) =>
-    new PackageDep(name, source, constraint, description);
-}
-
-/// A reference to a constrained range of versions of one package.
-class PackageDep extends _PackageName {
-  /// The allowed package versions.
-  final VersionConstraint constraint;
-
-  PackageDep(String name, String source, this.constraint, description)
-      : super(name, source, description);
-
-  String toString() {
-    if (isRoot) return "$name $constraint (root)";
-    return "$name $constraint from $source ($description)";
-  }
-
-  int get hashCode => name.hashCode ^ source.hashCode;
-
-  bool operator ==(other) {
-    // TODO(rnystrom): We're assuming here that we don't need to delve into the
-    // description.
-    return other is PackageDep &&
-           other.name == name &&
-           other.source == source &&
-           other.constraint == constraint;
-  }
-}
-
-class VersionStatus {
-
-  final VersionConstraint constraint;
-  final bool dev;
-  final List<Version> _versions;
-  Version get primary => Version.primary(_versions);
-  Version get latest => maxOf(_versions);
-  bool get isOutdated => !constraint.allows(primary);
-
-  VersionConstraint getUpdatedConstraint({bool unstable: false, bool keepMin: false, bool caret}) {
-    var updateTo = unstable ? latest : primary;
-    if(constraint.allows(updateTo)) return constraint;
-
-    var currentMin = (constraint is VersionRange ?
-        (constraint as VersionRange).min :
-        constraint);
-
-    var min = keepMin ? currentMin : updateTo;
-
-    var includeMin = !keepMin || constraint is! VersionRange ||
-        (constraint as VersionRange).includeMin;
-
-    // Cannot use caret constraint when `keepMin == true` and either of:
-    //
-    // * The updated version is not compatible with current min.
-    // * The current min is not included.
-    if (caret && ((keepMin && currentMin.nextBreaking < updateTo) || !includeMin)) {
-      return new VersionConstraint.compatibleWith(min);
-    }
-
-    return new VersionRange(min: min, max: updateTo.nextBreaking, includeMin: includeMin);
-  }
-
-  VersionStatus._(this._versions, this.constraint, this.dev);
-
-  static Future<VersionStatus> fetch(Pubspec pubspec, String packageName) {
-    var constraint = pubspec.versionConstraints[packageName];
-    var dev = pubspec.devDependencies.containsKey(packageName);
-    return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
-      return new VersionStatus._(package.versions, constraint, dev);
-    });
   }
 }
 

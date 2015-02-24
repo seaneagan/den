@@ -1,7 +1,8 @@
 
 library den.test.bump;
 
-import 'package:den/src/bump.dart';
+import 'package:den/src/api/src/bump.dart';
+import 'package:den/src/api/src/release_type.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:unittest/unittest.dart';
 

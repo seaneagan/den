@@ -1,19 +1,14 @@
 
-library den.util;
+library den.src.util;
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:pub_semver/pub_semver.dart';
 import 'package:quiver/async.dart';
 
-import 'pub.dart';
+import 'api/den_api.dart';
 
 bool nullOrEmpty(String str) => str == null || str.isEmpty;
-
-String indent(String str, int indent) {
-  return str.splitMapJoin('\n', onNonMatch: (String line) => ' ' * indent + line);
-}
 
 Future<Map<String, VersionStatus>> fetch(Pubspec pubspec, Iterable<String> names, onInvalid(Iterable<String> invalid)) => new Future(() {
   if(names.isEmpty) {
@@ -57,11 +52,4 @@ String enumName(enumValue) {
   return s.substring(s.indexOf('.') + 1);
 }
 
-Version get sdkVersion {
-  var sdkString = new RegExp(r'^[^ ]+').stringMatch(Platform.version);
-  return new Version.parse(sdkString);
-}
-
 String upperCaseFirst(String s) => s[0].toUpperCase() + s.substring(1);
-
-
