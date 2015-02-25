@@ -146,7 +146,7 @@ class Pubspec {
     var contents = "name: $name";
     var yaml = loadYamlNode(contents, sourceUrl: pubspecPath);
     var pubspec = new Pubspec(pubspecPath, contents, yaml);
-    return shouldDoGit(pubspec.path).then((shouldGit) {
+    return shouldDoGit(packageRoot).then((shouldGit) {
       dummyAuthor() {
         pubspec.author = '# name <email>';
       }
@@ -154,7 +154,6 @@ class Pubspec {
         pubspec.homepage = '# https://github.com/user/repo';
       }
       if (shouldGit) {
-        print('doing git');
         return gitUserName().then((name) => gitUserEmail().then((email) {
           pubspec.author = "$name <$email>";
         })).catchError((_) => dummyAuthor()).then((_) {
@@ -170,7 +169,6 @@ class Pubspec {
           });
         });
       } else {
-        print('not doing git');
         dummyAuthor();
         dummyHomepage();
       }
