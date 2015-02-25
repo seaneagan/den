@@ -111,26 +111,25 @@ class Pubspec {
       ..addAll(devDependencies.keys);
 
   Map<String, VersionConstraint> get versionConstraints {
-    if (_versionConstraints == null) {
-      _versionConstraints = {};
-      addGroup(Map<String, dynamic> group) {
-        group.forEach((name, description) {
-          VersionConstraint constraint;
-          if(description is String) constraint = parseVersionConstraint(description);
-          if(description is Map && description.length == 1 && description.containsKey('hosted')) {
-            constraint = description['hosted']['version'];
-          }
-          if(constraint != null) _versionConstraints[name] = constraint;
-        });
-      }
-      addGroup(dependencies);
-      addGroup(devDependencies);
-      addGroup(dependencyOverrides);
+
+    // TODO: Consider caching this, but then must be sure
+    //       to invalidate that cache on dependency changes.
+    var _versionConstraints = {};
+    addGroup(Map<String, dynamic> group) {
+      group.forEach((name, description) {
+        VersionConstraint constraint;
+        if(description is String) constraint = parseVersionConstraint(description);
+        if(description is Map && description.length == 1 && description.containsKey('hosted')) {
+          constraint = description['hosted']['version'];
+        }
+        if(constraint != null) _versionConstraints[name] = constraint;
+      });
     }
+    addGroup(dependencies);
+    addGroup(devDependencies);
+    addGroup(dependencyOverrides);
     return _versionConstraints;
   }
-
-  Map<String, VersionConstraint> _versionConstraints;
 
   Pubspec(
       this._path,
@@ -279,6 +278,14 @@ class Pubspec {
     });
   }
 
+  Future<VersionStatus> pull(String packageName, {bool caret}) {
+    return fetch(packageName).then((status) {
+      var updatedConstraint = status.getUpdatedConstraint(caret: caret == null ? caretAllowed : caret);
+      addDependency(new PackageDep(packageName, 'hosted', updatedConstraint, null), dev: status.dev);
+      return status;
+    });
+  }
+
   /// Adds/updates [sdkConstraint] as necessary to support carets,
   /// and returns whether or not it was necessary.
   bool _ensureSdkConstraintAllowsCaret() {
@@ -308,7 +315,7 @@ class Pubspec {
   }
 
   /// The [basename] of a pubpsec file.
-  static final String basename = "pubspec.yaml";
+  static final String basename = 'pubspec.yaml';
 
   /// Calculate the root of the package containing path.
   static String _getPackageRoot(String subPath) {

@@ -18,7 +18,7 @@ class FetchCommand {
     onInvalid(Iterable<String> invalid) {
       print('Can only fetch existing hosted dependencies, which do not include: $invalid');
     }
-    util.fetch(pubspec, names, onInvalid).then((Map<String, VersionStatus> outdated) {
+    util.fetchOrPull(pubspec, names, (pubspec, name) => pubspec.fetch(name), onInvalid).then((Map<String, VersionStatus> outdated) {
       if (outdated.isEmpty) {
         print('\nDependencies are up to date.');
         return;

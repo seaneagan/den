@@ -10,7 +10,7 @@ import 'api/den_api.dart';
 
 bool nullOrEmpty(String str) => str == null || str.isEmpty;
 
-Future<Map<String, VersionStatus>> fetch(Pubspec pubspec, Iterable<String> names, onInvalid(Iterable<String> invalid)) => new Future(() {
+Future<Map<String, VersionStatus>> fetchOrPull(Pubspec pubspec, Iterable<String> names, Future<VersionStatus> action(Pubspec pubspec, String name), onInvalid(Iterable<String> invalid)) => new Future(() {
   if(names.isEmpty) {
     names = pubspec.versionConstraints.keys;
     if(names.isEmpty) {
@@ -25,17 +25,12 @@ Future<Map<String, VersionStatus>> fetch(Pubspec pubspec, Iterable<String> names
   }
 
   return reduceAsync(names, {}, (outdated, name) {
-    return pubspec.fetch(name).then((VersionStatus status) {
+    return action(pubspec, name).then((VersionStatus status) {
       if (status.isOutdated) outdated[name] = status;
       return outdated;
     });
   });
 });
-
-bool defaultCaret(bool caret, Pubspec pubspec) {
-  if (caret != null) return caret;
-  return pubspec.caretAllowed;
-}
 
 VersionConstraint removeCaretFromVersionConstraint(VersionRange vr) =>
     new VersionRange(min: vr.min, includeMin: vr.includeMin, max: vr.max,

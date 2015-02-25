@@ -53,7 +53,7 @@ class InstallCommand {
   }) => Pubspec.load().then((pubspec) {
     // TODO: Validate existing pubspec, and fail if necessary.
     //       See dartbug.com/21169
-    caret = defaultCaret(caret, pubspec);
+    caret = caret == null ? pubspec.caretAllowed : caret;
     new Future(() {
       return Future.wait(packages
           .map(_SplitPackage.parse)

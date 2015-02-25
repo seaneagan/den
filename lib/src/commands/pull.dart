@@ -19,11 +19,11 @@ class PullCommand {
       @Flag(negatable: true)
       bool caret
     }) => Pubspec.load().then((pubspec) {
-    caret = defaultCaret(caret, pubspec);
+    caret = caret == null ? pubspec.caretAllowed : caret;
     onInvalid(Iterable<String> invalid) {
       print('Can only pull existing hosted dependencies, which do not include: $invalid');
     }
-    fetch(pubspec, names, onInvalid).then((Map<String, VersionStatus> outdated) {
+    fetchOrPull(pubspec, names, (pubspec, name) => pubspec.pull(name, caret: caret), onInvalid).then((Map<String, VersionStatus> outdated) {
       if (outdated.isEmpty) {
         print('\nDependencies were already up to date.');
         return;
@@ -31,9 +31,7 @@ class PullCommand {
 
       var lines = [];
       outdated.forEach((name, status) {
-        var updatedConstraint = status.getUpdatedConstraint(caret: caret);
-        pubspec.addDependency(new PackageDep(name, 'hosted', updatedConstraint, null), dev: status.dev);
-        lines.add('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(updatedConstraint.toString())}${theme.info(')')}');
+        lines.add('${theme.dependency(name)}${theme.info(' (old: ')}${theme.version(status.constraint.toString())}${theme.info(', new: ')}${theme.version(pubspec.versionConstraints[name].toString())}${theme.info(')')}');
       });
 
       pubspec.save();

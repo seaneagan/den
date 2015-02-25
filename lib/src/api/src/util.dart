@@ -28,6 +28,7 @@ VersionRange getCompatibleVersionRange(Version version) =>
     new VersionRange(min: version, max: version.nextBreaking, includeMin: true);
 
 Future<Version> fetchPrimaryVersion(String packageName) {
+  print('packageName: $packageName');
   return fetchPackage('http://pub.dartlang.org/packages/$packageName.json').then((Package package) {
     return Version.primary(package.versions);
   });
