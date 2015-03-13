@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:quiver/async.dart';
 
-import 'api/den_api.dart';
+import 'package:den_api/den_api.dart';
 
 bool nullOrEmpty(String str) => str == null || str.isEmpty;
 

@@ -6,7 +6,8 @@ import 'dart:io';
 
 import 'package:pub_semver/pub_semver.dart';
 
-import 'api/src/git.dart';
+// TODO: Don't depend on private code.
+import 'package:den_api/src/git.dart';
 
 const String _versionTemplate = 'v{v}';
 

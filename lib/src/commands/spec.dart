@@ -4,9 +4,9 @@ import 'dart:async';
 import 'dart:mirrors';
 import 'dart:io';
 
-import '../api/den_api.dart';
+import 'package:den_api/den_api.dart';
 // TODO: Don't depend on private code.
-import '../api/src/util.dart';
+import 'package:den_api/src/util.dart';
 import 'package:unscripted/unscripted.dart';
 import 'package:prompt/prompt.dart';
 import 'package:pub_semver/pub_semver.dart';

@@ -3,7 +3,7 @@ library den.src.commands.uninstall;
 
 import 'dart:convert';
 
-import '../api/den_api.dart';
+import 'package:den_api/den_api.dart';
 import 'package:unscripted/unscripted.dart';
 
 import '../theme.dart';
