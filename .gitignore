@@ -13,3 +13,6 @@ packages
 
 # Include when developing application packages.
 pubspec.lock
+
+# Generated during command tests
+test/commands/pubspec.yaml
