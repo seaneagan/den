@@ -24,6 +24,7 @@ den bump 1.2.3
 den bump patch
 den bump major --pre-id beta
 den bump release --pre
+den bump build  (1.0.2+1 --> 1.0.2+2)
 
 # Install dependencies (defaults to '>={latest stable} <{next breaking}')
 den install polymer browser
