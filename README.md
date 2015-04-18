@@ -20,11 +20,15 @@ den spec
 den spec --force
 
 # Bump your pubspec version (and do a tagged version commit if in a git repo)
-den bump 1.2.3
-den bump patch
-den bump major --pre-id beta
-den bump release --pre
-den bump build  (1.0.2+1 --> 1.0.2+2)
+den bump patch               # 1.2.3 -> 1.2.4
+den bump minor               # 1.2.3 -> 1.3.0
+den bump major --pre-id beta # 1.2.3 -> 2.0.0-beta.0
+den bump release --pre       # 1.0.0-dev.2 -> 1.0.0-dev.3
+den bump release             # 1.0.0-dev.2 -> 1.0.0
+den bump build               # 1.0.2+1 -> 1.0.2+2
+den bump breaking            # 0.5.1 -> 0.6.0 / 1.2.3 -> 2.0.0
+den bump 1.2.3-dev           # 1.2.2 -> 1.2.3-dev
+den bump minor -m "ver{v}"   # Custom commit message.
 
 # Install dependencies (defaults to '>={latest stable} <{next breaking}')
 den install polymer browser
