@@ -84,6 +84,13 @@ Otherwise, they will use range syntax e.g. `>=1.2.3 <2.0.0`
 [caret_info]: https://groups.google.com/a/dartlang.org/forum/#!topic/misc/0t9qQF-rZg4
 [sdk_constraint]: https://www.dartlang.org/tools/pub/pubspec.html#sdk-constraints
 
+##Programmatic Usage
+
+The underlying functionality is available as a Dart API through the [den_api][] package,
+which this package is merely a command-line interface for.
+
+[den_api]: https://github.com/seaneagan/den_api
+
 ##Inspiration
 
 `den install` was inspired by [`npm install --save`][npm install] and [`bower install --save`][bower install]
