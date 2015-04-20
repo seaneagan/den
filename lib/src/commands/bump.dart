@@ -25,8 +25,8 @@ class BumpCommand {
 Bump the pubspec version.
 
 If run in a git repo it also creates a version commit and tag, and fails if 
-the repo is not clean.  The --message option can be used to customize the 
-commit message.''')
+the repo is not clean.  Use the --message option to customize the commit
+message.  Use --no-git to opt out of the version commit and tag.''')
   bump(
       @Positional(allowed: _getAllowedReleaseTypes, parser: _parseBumpStrategy,
           help: '''
@@ -65,7 +65,10 @@ Do a pre-release with an id e.g. "beta".  If already on an
        @Option(abbr: "m", defaultsTo: "v{v}", help: """
 The git commit message template.  Any instance of "{v}" will 
 be replaced by the new version.""")
-       String message
+       String message,
+       @Flag(negatable: true, defaultsTo: true, help: """
+Whether to do a git commit and tag when in a git repo.""")
+       bool git
   }) => Pubspec.load().then((pubspec) {
 
     var version = pubspec.version;
@@ -96,16 +99,24 @@ be replaced by the new version.""")
       pubspec.bump(releaseType, pre: effectivePre);
     }
 
-    var packagePath = p.dirname(pubspec.path);
-
-    shouldDoTaggedVersionCommit(packagePath).then((should) {
+    save() {
       pubspec.save();
       print(
           theme.info('Bumped version from ') +
-          theme.version(pubspec.version.toString()) +
+          theme.version(version.toString()) +
           theme.info(' to ') +
           theme.version(pubspec.version.toString()));
+    }
 
+    if (!git) {
+      save();
+      return null;
+    }
+
+    var packagePath = p.dirname(pubspec.path);
+
+    return shouldDoTaggedVersionCommit(packagePath).then((should) {
+      save();
       if (should) {
         return taggedVersionCommit(pubspec.version, packagePath, messageTemplate: message);
       } else {
