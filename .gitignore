@@ -1,6 +1,6 @@
 # Don’t commit the following directories created by pub.
 build/
-packages/
+packages
 .buildlog
 .pub
 
@@ -13,3 +13,6 @@ packages/
 
 # Include when developing application packages.
 pubspec.lock
+
+# Generated during command tests
+test/commands/pubspec.yaml
